@@ -1,0 +1,381 @@
+/* ColorPicker popover */
+
+.popover {
+  z-index: 10;
+  background: var(--cs-black, #141422);
+  border: 1px solid var(--cs-border, #ffffff1a);
+  border-radius: 10px;
+  flex-direction: column;
+  display: flex;
+  position: fixed;
+  overflow: hidden;
+  box-shadow: 0 8px 32px #00000080;
+}
+
+.header {
+  border-bottom: 1px solid var(--cs-border, #ffffff1a);
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 6px 6px 10px;
+  display: flex;
+}
+
+.header:active {
+  cursor: grabbing;
+}
+
+.headerTitle {
+  color: var(--cs-feint-text);
+  letter-spacing: 0.02em;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.closeButton {
+  width: 20px;
+  height: 20px;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  display: flex;
+}
+
+.closeButton:hover {
+  color: var(--cs-white);
+}
+
+.body {
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  display: flex;
+}
+
+/* SV area (saturation-value 2D plane) */
+
+.svArea {
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  border-radius: 4px;
+  width: 100%;
+  height: 200px;
+  position: relative;
+}
+
+.svArea:before {
+  content: "";
+  border-radius: inherit;
+  background: linear-gradient(to right, #fff, #0000);
+  position: absolute;
+  inset: 0;
+}
+
+.svArea:after {
+  content: "";
+  border-radius: inherit;
+  background: linear-gradient(#0000, #000);
+  position: absolute;
+  inset: 0;
+}
+
+.thumb {
+  pointer-events: none;
+  z-index: 1;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  width: 12px;
+  height: 12px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 1px #0000004d;
+}
+
+/* Slider tracks */
+
+.sliderTrack {
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  border-radius: 4px;
+  width: 100%;
+  height: 12px;
+  position: relative;
+}
+
+.sliderThumb {
+  pointer-events: none;
+  z-index: 1;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  width: 12px;
+  height: 12px;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 1px #0000004d;
+}
+
+.hueTrack {
+  background: linear-gradient(
+    to right,
+    red 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    red 100%
+  );
+}
+
+.alphaTrack {
+  position: relative;
+}
+
+.alphaTrack:before {
+  content: "";
+  border-radius: inherit;
+  background-image: repeating-conic-gradient(
+    var(--cs-checker) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 8px 8px;
+  position: absolute;
+  inset: 0;
+}
+
+.alphaGradient {
+  border-radius: inherit;
+  position: absolute;
+  inset: 0;
+}
+
+.visualSection {
+  flex-direction: column;
+  gap: 6px;
+  display: flex;
+}
+
+/* Channel inputs */
+
+.channelRow {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  display: grid;
+}
+
+.channelRow.twoCol {
+  grid-template-columns: 3fr 1fr;
+}
+
+.channelGroup {
+  flex-direction: column;
+  gap: 2px;
+  display: flex;
+}
+
+.channelLabels {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  display: grid;
+}
+
+.channelLabels.twoCol {
+  grid-template-columns: 3fr 1fr;
+}
+
+.channelLabel {
+  color: var(--cs-secondary-text);
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.channelInput {
+  background: var(--cs-input-bg);
+  min-width: 0;
+  height: 28px;
+  color: var(--cs-foreground, #fff);
+  font-family: var(--cs-font-mono, monospace);
+  text-align: center;
+  border: none;
+  border-radius: 4px;
+  outline: none;
+  padding: 0 6px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.channelInput:focus {
+  background: var(--cs-input-bg-hover);
+}
+
+.scrubbable:not(:focus) {
+  cursor: ew-resize;
+}
+
+.customInput {
+  background: var(--cs-input-bg);
+  height: 28px;
+  color: var(--cs-foreground, #fff);
+  font-family: var(--cs-font-mono, monospace);
+  border: none;
+  border-radius: 4px;
+  outline: none;
+  grid-column: 1 / -1;
+  padding: 0 8px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.customInput:focus {
+  background: var(--cs-input-bg-hover);
+}
+
+/* Bottom row (mode select + eyedropper) */
+
+.bottomRow {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  display: grid;
+}
+
+.modeSelect {
+  appearance: none;
+  background-color: var(--cs-input-bg);
+  background-image: var(--cs-select-chevron);
+  height: 28px;
+  color: var(--cs-foreground, #fff);
+  cursor: pointer;
+  background-position: right 6px center;
+  background-repeat: no-repeat;
+  border: none;
+  border-radius: 4px;
+  outline: none;
+  grid-column: span 3;
+  padding: 0 22px 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.modeSelect:focus {
+  background-color: var(--cs-input-bg-hover);
+}
+
+.eyedropperButton {
+  background: var(--cs-input-bg);
+  height: 28px;
+  color: var(--cs-secondary-text);
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.eyedropperButton:hover {
+  background: var(--cs-input-bg-hover);
+  color: var(--cs-secondary-text-hover);
+}
+
+/* Swatch in row */
+
+.colorGroup {
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  display: flex;
+}
+
+.swatchWrapper {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  position: relative;
+}
+
+.swatchWrapper .swatchButton {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+
+.swatchButton {
+  border: 1px solid var(--cs-input-border-strong);
+  cursor: pointer;
+  background: none;
+  border-radius: 3px;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.swatchButton:before {
+  content: "";
+  z-index: 0;
+  background-image: repeating-conic-gradient(#8080804d 0% 25%, #0000 0% 50%);
+  background-size: 6px 6px;
+  position: absolute;
+  inset: 0;
+}
+
+.swatchColor {
+  z-index: 1;
+  border-radius: 2px;
+  position: absolute;
+  inset: 0;
+}
+
+.colorText {
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  min-width: 0;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  border-radius: 4px;
+  outline: none;
+  flex: 1;
+  padding: 2px 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.colorText:focus {
+  border-color: var(--cs-accent);
+}
+
+.emptyColorSwatch {
+  border: 1px solid var(--cs-input-border-strong);
+  pointer-events: none;
+  background: #8080804d;
+  border-radius: 3px;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.emptyColorSwatch:after {
+  content: "";
+  background: var(--cs-secondary-text);
+  width: 141%;
+  height: 1px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}

@@ -1,0 +1,197 @@
+/* Panel container — dark theme, resizable side panel */
+
+.panel {
+  z-index: 4;
+  pointer-events: auto;
+  border: 1px solid var(--cs-border);
+  background: var(--cs-layer);
+  color: var(--cs-foreground);
+  border-radius: 10px;
+  flex-direction: column;
+  min-height: 0;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 12px;
+  display: flex;
+  position: fixed;
+  overflow: hidden;
+  box-shadow: 0 8px 32px #0006;
+}
+
+.panel[data-dock="bottom"] {
+  border-radius: 10px;
+  transition: left 0.2s, right 0.2s;
+}
+
+.panel.dragging {
+  opacity: 0.9;
+  transition: none;
+}
+
+/* ── Header ── */
+
+.header {
+  border-bottom: 1px solid var(--cs-border);
+  cursor: grab;
+  user-select: none;
+  background: var(--cs-layer);
+  z-index: 3;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  display: flex;
+  position: sticky;
+  top: 0;
+}
+
+.panel:not([data-dock="bottom"]) > .header:active {
+  cursor: grabbing;
+}
+
+.panel[data-dock="bottom"] > .header {
+  cursor: default;
+}
+
+/* ── Label ── */
+
+.label {
+  color: var(--cs-feint-text);
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--cs-font-mono, monospace);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* ── Tab bar ── */
+
+.tabBar {
+  gap: 2px;
+  display: flex;
+}
+
+.tab {
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 0.1s, background 0.1s;
+}
+
+.tab:hover:not(:disabled) {
+  color: var(--cs-white);
+  background: var(--cs-feint);
+}
+
+.tabActive {
+  color: var(--cs-accent);
+  background: color-mix(in srgb, var(--cs-accent) 12%, var(--cs-layer));
+}
+
+.tabActive:hover {
+  color: var(--cs-accent);
+  background: color-mix(in srgb, var(--cs-accent) 12%, var(--cs-layer));
+  opacity: 0.9;
+}
+
+.tab:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Header right slot ── */
+
+.headerRight {
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  display: flex;
+}
+
+.headerButton {
+  width: 20px;
+  height: 20px;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  display: flex;
+}
+
+.headerButton:hover {
+  color: var(--cs-white);
+}
+
+/* ── Content ── */
+
+.content {
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden auto;
+}
+
+.content::-webkit-scrollbar {
+  background: none;
+  width: 4px;
+  height: 4px;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.content::-webkit-scrollbar-corner {
+  background: none;
+}
+
+/* ── Resize edges ── */
+
+.resizeEdge {
+  z-index: 5;
+  position: absolute;
+}
+
+.resizeEdgeTop {
+  cursor: ns-resize;
+  height: 6px;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.resizeEdgeLeft {
+  cursor: ew-resize;
+  width: 6px;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.resizeEdgeRight {
+  cursor: ew-resize;
+  width: 6px;
+  top: 0;
+  bottom: 0;
+  right: 0;
+}

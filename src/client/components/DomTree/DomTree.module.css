@@ -1,0 +1,131 @@
+.tree {
+  font-family: var(--ls-font-mono);
+  padding: 4px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow: auto;
+}
+
+.tree::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+  background: none;
+}
+
+.tree::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.tree::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.tree::-webkit-scrollbar-corner {
+  background: none;
+}
+
+.empty {
+  color: var(--ls-text-muted);
+  padding: 16px;
+  font-size: 12px;
+}
+
+.node {
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--ls-text);
+  border-radius: var(--ls-radius-sm);
+  align-items: center;
+  margin: 0 4px 1px;
+  padding: 3px 6px;
+  transition: background 0.1s;
+  display: flex;
+}
+
+.node:hover {
+  background: var(--ls-bg-hover);
+}
+
+.node.dimmed {
+  opacity: 0.25;
+  transition: opacity 0.15s, background 0.1s;
+}
+
+.node.selected {
+  background: color-mix(in srgb, var(--ls-accent) 20%, transparent);
+  color: var(--ls-accent);
+}
+
+.node.selectedSecondary {
+  background: color-mix(in srgb, var(--ls-accent) 12%, transparent);
+  color: var(--ls-text);
+}
+
+.node.hovered {
+  background: var(--ls-bg-active);
+}
+
+.node.selected.hovered {
+  background: color-mix(in srgb, var(--ls-accent) 25%, transparent);
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--ls-text-muted);
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.15s;
+  display: flex;
+}
+
+.chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.chevron.hidden {
+  visibility: hidden;
+  width: 8px;
+}
+
+.tag {
+  color: var(--ls-accent);
+}
+
+.tagInput {
+  color: var(--ls-accent);
+  border: 1px solid var(--ls-border);
+  font: inherit;
+  background: none;
+  border-radius: 2px;
+  outline: none;
+  width: 60px;
+  margin: -1px 0;
+  padding: 0 2px;
+}
+
+.className {
+  color: var(--ls-text-secondary);
+  margin-left: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.component {
+  color: var(--ls-success);
+  margin-left: 4px;
+  font-style: italic;
+  font-size: 10px;
+}
+
+.textPreview {
+  color: var(--ls-text-muted);
+  margin-left: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+  font-style: italic;
+}

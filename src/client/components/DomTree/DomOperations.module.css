@@ -1,0 +1,103 @@
+/* ── Context menu (right-click on tree node) ── */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+}
+
+.menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--ls-bg-panel);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  font-family: var(--ls-font);
+  font-size: 12px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--ls-radius-sm);
+  background: none;
+  color: var(--ls-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.item:hover {
+  background: var(--ls-bg-hover);
+}
+
+.danger {
+  color: var(--ls-error);
+}
+
+.danger:hover {
+  background: color-mix(in srgb, var(--ls-error) 12%, transparent);
+}
+
+.shortcut {
+  color: var(--ls-text-muted);
+  margin-left: 16px;
+  font-size: 11px;
+}
+
+.separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--ls-border);
+}
+
+/* ── Action bar (shown above tree when element selected) ── */
+
+.actionBar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--ls-radius-sm);
+  background: none;
+  color: var(--ls-text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.actionBtn:hover {
+  background: var(--ls-bg-hover);
+  color: var(--ls-text);
+}
+
+.actionBtn.dangerBtn:hover {
+  background: color-mix(in srgb, var(--ls-error) 12%, transparent);
+  color: var(--ls-error);
+}
+
+.actionBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.actionBtn:disabled:hover {
+  background: none;
+  color: var(--ls-text-muted);
+}

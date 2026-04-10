@@ -1,0 +1,311 @@
+/* GradientInput — gradient editor styles, dark theme */
+
+.gradientPicker {
+  flex-direction: column;
+  gap: 8px;
+  display: flex;
+}
+
+.previewWrapper {
+  border-radius: 4px;
+  height: 24px;
+  position: relative;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.previewCheckerboard {
+  background-image: repeating-conic-gradient(
+    var(--cs-checker, #80808033) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 8px 8px;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.previewGradient {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.stopBar {
+  position: relative;
+  height: 16px;
+  touch-action: none;
+  user-select: none;
+}
+
+.stopThumb {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  transform: translateX(-50%);
+  cursor: grab;
+  box-shadow: 0 0 0 1px #0000004d;
+  touch-action: none;
+}
+
+.stopThumb:active {
+  cursor: grabbing;
+}
+
+.stopThumb.selected {
+  border-color: var(--cs-accent, #6366f1);
+  box-shadow: 0 0 0 1px var(--cs-accent, #6366f1);
+}
+
+.stopEditor {
+  flex-direction: column;
+  gap: 6px;
+  display: flex;
+}
+
+.stopColorRow {
+  align-items: center;
+  gap: 6px;
+  display: flex;
+}
+
+.stopSwatch {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 1px solid var(--cs-input-border-strong, #ffffff33);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.stopSwatch:before {
+  content: "";
+  background-image: repeating-conic-gradient(#8080804d 0% 25%, #0000 0% 50%);
+  background-size: 6px 6px;
+  position: absolute;
+  inset: 0;
+}
+
+.stopSwatchColor {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  z-index: 1;
+}
+
+.stopColorInput {
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  min-width: 0;
+  height: 24px;
+  color: var(--cs-foreground, #fff);
+  font-family: var(--cs-font-mono, monospace);
+  border-radius: 4px;
+  outline: none;
+  flex: 1;
+  padding: 2px 6px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.stopColorInput:focus {
+  border-color: var(--cs-accent, #6366f1);
+}
+
+.positionInput {
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  width: 52px;
+  height: 24px;
+  color: var(--cs-foreground, #fff);
+  font-family: var(--cs-font-mono, monospace);
+  text-align: center;
+  border-radius: 4px;
+  outline: none;
+  flex-shrink: 0;
+  padding: 2px 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.positionInput:focus {
+  border-color: var(--cs-accent, #6366f1);
+}
+
+.deleteStopButton {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--cs-feint-text, #888);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  display: flex;
+}
+
+.deleteStopButton:hover {
+  color: var(--cs-white, #fff);
+  background: var(--cs-input-bg-hover);
+}
+
+.divider {
+  height: 1px;
+  background: var(--cs-border, #ffffff1a);
+}
+
+.typeRow {
+  align-items: center;
+  gap: 6px;
+  display: flex;
+}
+
+.typeSelect {
+  appearance: none;
+  background-color: var(--cs-input-bg);
+  background-image: var(--cs-select-chevron);
+  border: 1px solid var(--cs-input-border);
+  height: 24px;
+  color: var(--cs-foreground, #fff);
+  cursor: pointer;
+  background-position: right 6px center;
+  background-repeat: no-repeat;
+  border-radius: 4px;
+  outline: none;
+  flex: 1;
+  padding: 2px 20px 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.typeSelect:focus {
+  border-color: var(--cs-accent, #6366f1);
+}
+
+.repeatLabel {
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--cs-secondary-text, #aaa);
+  white-space: nowrap;
+  display: flex;
+}
+
+.angleInput {
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  width: 52px;
+  height: 24px;
+  color: var(--cs-foreground, #fff);
+  font-family: var(--cs-font-mono, monospace);
+  text-align: center;
+  border-radius: 4px;
+  outline: none;
+  flex-shrink: 0;
+  padding: 2px 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.angleInput:focus {
+  border-color: var(--cs-accent, #6366f1);
+}
+
+.controlRow {
+  align-items: center;
+  gap: 6px;
+  display: flex;
+}
+
+.controlLabel {
+  color: var(--cs-secondary-text, #aaa);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: 36px;
+}
+
+.controlInput {
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  height: 24px;
+  color: var(--cs-foreground, #fff);
+  font-family: var(--cs-font-mono, monospace);
+  border-radius: 4px;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.controlInput:focus {
+  border-color: var(--cs-accent, #6366f1);
+}
+
+/* Swatch + text in the property row */
+
+.gradientGroup {
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  display: flex;
+}
+
+.gradientSwatch {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--cs-input-border-strong, #ffffff33);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.gradientSwatch:before {
+  content: "";
+  background-image: repeating-conic-gradient(#8080804d 0% 25%, #0000 0% 50%);
+  background-size: 6px 6px;
+  position: absolute;
+  inset: 0;
+}
+
+.gradientSwatchColor {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  z-index: 1;
+}
+
+.gradientText {
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  min-width: 0;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  border-radius: 4px;
+  outline: none;
+  flex: 1;
+  padding: 2px 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.gradientText:focus {
+  border-color: var(--cs-accent);
+}

@@ -1,0 +1,116 @@
+/* PropertiesPanel — dark theme */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--cs-font);
+  font-size: 12px;
+  color: var(--cs-foreground);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--cs-feint-text);
+  font-size: 12px;
+  text-align: center;
+  user-select: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cs-border);
+  flex-shrink: 0;
+}
+
+.headerTag {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--cs-accent);
+  font-family: var(--cs-font-mono);
+}
+
+.headerSelector {
+  font-size: 11px;
+  color: var(--cs-feint-text);
+  font-family: var(--cs-font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.sections {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.sections::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+  background: none;
+}
+
+.sections::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.sections::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sections::-webkit-scrollbar-corner {
+  background: none;
+}
+
+/* Collapsible section */
+
+.section {
+  border-bottom: 1px solid var(--cs-border);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--cs-label-text);
+  font-variation-settings: "opsz" 28, "wght" 560;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sectionHeader:hover {
+  background: color-mix(in srgb, var(--cs-foreground) 4%, transparent);
+}
+
+.chevron {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  color: var(--cs-feint-text);
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.sectionBody {
+  padding: 4px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

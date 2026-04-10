@@ -1,0 +1,198 @@
+/* AttributesSection — dark theme */
+
+.emptyHint {
+  color: var(--cs-feint-text);
+  font-size: 11px;
+  padding: 4px 0;
+  user-select: none;
+}
+
+.attrRow {
+  display: grid;
+  grid-template-columns: 76px 1fr 20px;
+  align-items: center;
+  column-gap: 8px;
+  height: 28px;
+}
+
+.attrName {
+  font-family: var(--cs-font-mono);
+  font-size: 11px;
+  color: var(--cs-label-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  cursor: default;
+}
+
+.attrNameInput {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--cs-accent);
+  outline: none;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  font-size: 11px;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.attrRow:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: var(--cs-foreground);
+  background: color-mix(in srgb, var(--cs-foreground) 8%, transparent);
+}
+
+.newAttrRow {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  height: 28px;
+}
+
+.newAttrInput {
+  padding: 2px 4px;
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  border-radius: 3px;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  font-size: 11px;
+  outline: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.newAttrInput:focus {
+  border-color: var(--cs-accent);
+}
+
+.newAttrName {
+  width: 76px;
+  flex-shrink: 0;
+}
+
+.newAttrValue {
+  flex: 1;
+}
+
+.newAttrCommit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--cs-accent);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.newAttrCommit:hover {
+  background: color-mix(in srgb, var(--cs-accent) 15%, transparent);
+}
+
+.newAttrCancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.newAttrCancel:hover {
+  color: var(--cs-foreground);
+  background: color-mix(in srgb, var(--cs-foreground) 8%, transparent);
+}
+
+.classTokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  grid-column: 2 / 3;
+}
+
+.classToken {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  border-radius: 3px;
+  font-family: var(--cs-font-mono);
+  font-size: 10px;
+  color: var(--cs-foreground);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classTokenRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  padding: 0;
+  width: 12px;
+  height: 12px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.classTokenRemove:hover {
+  color: var(--cs-foreground);
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: var(--cs-font);
+  font-size: 11px;
+}
+
+.addBtn:hover {
+  color: var(--cs-foreground);
+}

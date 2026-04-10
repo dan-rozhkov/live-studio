@@ -1,0 +1,20 @@
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Build
+dist/
+
+# Misc
+.DS_Store
+.fleet
+.idea
+.playwright-mcp
+
+# Local env files
+.env
+.env.*
+!.env.example

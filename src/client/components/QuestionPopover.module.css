@@ -1,0 +1,65 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 80px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.popover {
+  background: var(--cs-layer);
+  border: 1px solid var(--cs-border);
+  border-radius: 12px;
+  padding: 16px;
+  width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: slideDown 0.15s ease;
+}
+
+.question {
+  color: var(--cs-foreground);
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option {
+  text-align: left;
+  background: var(--cs-feint);
+  width: 100%;
+  color: var(--cs-foreground);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--cs-font-mono, monospace);
+  word-break: break-all;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  transition: background 0.1s;
+}
+
+.option:hover {
+  background: color-mix(in srgb, var(--cs-accent) 15%, transparent);
+}

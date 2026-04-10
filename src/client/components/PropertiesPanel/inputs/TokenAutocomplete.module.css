@@ -1,0 +1,68 @@
+/* Token autocomplete dropdown — dark theme */
+
+.wrapper {
+  position: relative;
+}
+
+.dropdown {
+  z-index: 100;
+  background: var(--cs-black);
+  border: 1px solid var(--cs-input-border-strong);
+  border-radius: 6px;
+  min-width: 180px;
+  max-width: 260px;
+  max-height: 200px;
+  padding: 4px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px #0006;
+}
+
+.item {
+  width: 100%;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  cursor: pointer;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  display: flex;
+}
+
+.item:hover,
+.itemActive {
+  background: var(--cs-feint);
+}
+
+.colorSwatch {
+  border: 1px solid var(--cs-input-border-strong);
+  border-radius: 2px;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.tokenName {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tokenValue {
+  color: var(--cs-feint-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  max-width: 80px;
+  font-size: 10px;
+  overflow: hidden;
+}

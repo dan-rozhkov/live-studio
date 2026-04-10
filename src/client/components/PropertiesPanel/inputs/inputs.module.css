@@ -1,0 +1,249 @@
+/* Shared input styles — dark theme, compact sizing */
+
+.row {
+  grid-template-columns: 76px 1fr 20px;
+  align-items: center;
+  column-gap: 8px;
+  height: 28px;
+  display: grid;
+}
+
+.row > :only-child {
+  grid-column: 1 / -1;
+}
+
+.indent .label {
+  padding-left: 10px;
+}
+
+.label {
+  font-variation-settings: "opsz" 28, "wght" 480;
+  color: var(--cs-label-text);
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.label.mono {
+  font-family: var(--cs-font-mono);
+  font-variation-settings: normal;
+  font-size: 11px;
+}
+
+.select {
+  appearance: none;
+  background-color: var(--cs-input-bg);
+  background-image: var(--cs-select-chevron);
+  border: 1px solid var(--cs-input-border);
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  cursor: pointer;
+  background-position: right 6px center;
+  background-repeat: no-repeat;
+  border-radius: 4px;
+  outline: none;
+  padding: 2px 20px 2px 8px;
+  font-size: 12px;
+}
+
+.select:focus {
+  border-color: var(--cs-accent);
+}
+
+.textInput {
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  width: 100%;
+  min-width: 0;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  border-radius: 4px;
+  outline: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.textInput:focus {
+  border-color: var(--cs-accent);
+}
+
+/* NumberInput styles */
+
+.numberInputWrapper {
+  flex-shrink: 0;
+  align-items: center;
+  width: 72px;
+  display: flex;
+  position: relative;
+}
+
+.numberInput {
+  box-sizing: border-box;
+  background: var(--cs-input-bg);
+  width: 100%;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  outline: none;
+  min-width: 0;
+  padding: 2px 18px 2px 4px;
+  font-size: 12px;
+}
+
+.numberInputWrapper:hover .numberInput {
+  border-color: var(--cs-input-border);
+}
+
+.numberInput:focus {
+  border-color: transparent;
+  border-bottom-color: var(--cs-accent);
+}
+
+.steppers {
+  opacity: 0;
+  cursor: ns-resize;
+  user-select: none;
+  flex-direction: column;
+  gap: 0;
+  padding: 1px;
+  display: flex;
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+}
+
+.numberInputWrapper:hover .steppers,
+.numberInput:focus ~ .steppers {
+  opacity: 1;
+}
+
+.stepper {
+  width: 12px;
+  height: 7px;
+  color: var(--cs-feint-text);
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.stepper:first-child {
+  margin-bottom: 1px;
+}
+
+.stepper:hover {
+  color: var(--cs-foreground);
+}
+
+.stepper svg {
+  width: 8px;
+  height: 5px;
+}
+
+.slider {
+  appearance: none;
+  cursor: pointer;
+  background: var(--cs-fill-bg, var(--cs-input-bg));
+  border-radius: 2px;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  background: var(--cs-white);
+  cursor: pointer;
+  border: none;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  transition: transform 0.1s;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.slider::-moz-range-thumb {
+  background: var(--cs-white);
+  cursor: pointer;
+  border: none;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+}
+
+.slider::-moz-range-track {
+  background: none;
+  border-radius: 2px;
+  height: 4px;
+}
+
+.sliderGroup {
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  display: flex;
+  container-type: inline-size;
+}
+
+@container (width <= 80px) {
+  .slider {
+    display: none;
+  }
+}
+
+.numberInputWrapper:only-child {
+  flex: 1;
+  width: auto;
+}
+
+.compact .numberInput {
+  text-align: center;
+  width: 64px;
+}
+
+/* Toggle styles */
+
+.toggle {
+  background: var(--cs-feint-solid);
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  flex-shrink: 0;
+  width: 28px;
+  height: 16px;
+  padding: 0;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.toggleOn {
+  background: var(--cs-accent);
+}
+
+.thumb {
+  background: var(--cs-white);
+  pointer-events: none;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  transition: transform 0.15s;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+.toggleOn .thumb {
+  transform: translateX(12px);
+}

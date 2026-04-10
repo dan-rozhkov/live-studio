@@ -1,0 +1,82 @@
+/* DragControls — visual drag handles for padding, gap, border-radius */
+
+/* Shared container for all drag indicators — positioned on document.documentElement */
+.container {
+  position: fixed;
+  pointer-events: none;
+  z-index: 2147483641;
+  box-sizing: border-box;
+  display: none;
+  overflow: visible;
+}
+
+/* Dashed line that shows the edge being adjusted */
+.line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  box-sizing: border-box;
+}
+
+/* Hit area — transparent zone that captures pointer events */
+.hitArea {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Grip dot pattern */
+.grip {
+  border-radius: 2px;
+  transition: transform 0.15s, filter 0.15s;
+}
+
+/* Tooltip label showing current value */
+.label {
+  position: absolute;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: monospace;
+  white-space: nowrap;
+  background: #1a1a28;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+/* Border-radius handle — small circle in the corner */
+.radiusHandle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: nwse-resize;
+  transform: translate(-50%, -50%);
+  transition: transform 0.15s, filter 0.15s;
+}
+
+.radiusInner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}

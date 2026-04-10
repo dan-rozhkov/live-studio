@@ -1,0 +1,46 @@
+/* ---------------------------------------------------------------------------
+ * Overlay styles — hover, selection, layout box, multi-select
+ *
+ * All overlays are position:fixed, pointer-events:none, placed on
+ * document.documentElement (outside shadow DOM) so they render above
+ * the user's page content.
+ * --------------------------------------------------------------------------- */
+
+/* Base for all overlay divs */
+.overlay {
+  position: fixed;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Hover highlight: semi-transparent blue background + border */
+.hover {
+  composes: overlay;
+  z-index: 2147483640;
+  background: rgba(111, 168, 220, 0.3);
+  border: 1px solid rgba(111, 168, 220, 0.7);
+  transition: top 0.05s, left 0.05s, width 0.05s, height 0.05s;
+}
+
+/* Selection: blue border, no background */
+.select {
+  composes: overlay;
+  z-index: 2147483639;
+  border: 1px solid rgba(111, 168, 220, 0.7);
+}
+
+/* Layout box: dashed border showing untransformed bounds */
+.layoutBox {
+  composes: overlay;
+  z-index: 2147483638;
+  border: 1px dashed rgba(111, 168, 220, 0.45);
+  background: none;
+}
+
+/* Multi-select secondary overlays */
+.multiSelect {
+  composes: overlay;
+  z-index: 2147483638;
+  border: 1px dashed rgba(111, 168, 220, 0.7);
+  background: rgba(111, 168, 220, 0.08);
+}

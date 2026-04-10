@@ -1,0 +1,551 @@
+// ---------------------------------------------------------------------------
+// DomOperations — context menu + action bar for DOM tree operations
+// ---------------------------------------------------------------------------
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Copy, Trash2, SquarePlus, ListPlus } from 'lucide-preact';
+import { useStore } from '../../state/store';
+import {
+  getElementById,
+  assignId,
+  fetchDomTree,
+  getElementInfoById,
+  scrollElementIntoView,
+} from '../../bridge/dom-bridge';
+import type { DomNode } from '../../state/slices/dom-slice';
+import type { Change } from '../../state/slices/edit-slice';
+import type { DomTreeNode } from '../../bridge/dom-bridge';
+import styles from './DomOperations.module.css';
+
+// ── Helpers ──
+
+const PROTECTED_TAGS = new Set(['html', 'body', 'head']);
+
+/** Find a DomNode by id inside a tree snapshot. */
+function findNodeInTree(tree: DomNode | null, targetId: number): DomNode | null {
+  if (!tree) return null;
+  if (tree.id === targetId) return tree;
+  for (const child of tree.children) {
+    const found = findNodeInTree(child, targetId);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** Convert bridge DomTreeNode to store DomNode shape. */
+function convertTree(node: DomTreeNode): DomNode {
+  return {
+    id: node.id,
+    tag: node.localName,
+    text: node.textContent || undefined,
+    children: node.children.map(convertTree),
+    attributes: Object.keys(node.attributes).length > 0 ? node.attributes : undefined,
+    component: node.component,
+    sourceFile: node.source,
+  };
+}
+
+/** Rebuild the DOM tree snapshot and push it into the store. */
+function rebuildDomTree(): void {
+  const raw = fetchDomTree();
+  if (!raw) return;
+  useStore.getState().setDomTree(convertTree(raw));
+}
+
+// ── Low-level DOM operations ──
+
+/**
+ * Remove element from the live DOM.
+ * Returns `true` if the element was successfully removed.
+ */
+function removeElementById(id: number): boolean {
+  const el = getElementById(id);
+  if (!el || !el.parentNode) return false;
+  el.parentNode.removeChild(el);
+  return true;
+}
+
+/**
+ * Insert a new child element (given tag) as the last child of `parentId`.
+ * Returns the new element's registry id, or `null` on failure.
+ */
+function addChildElement(parentId: number, tag: string): number | null {
+  const parent = getElementById(parentId);
+  if (!parent) return null;
+  const newEl = document.createElement(tag);
+  newEl.style.width = '100px';
+  newEl.style.height = '100px';
+  parent.appendChild(newEl);
+  return assignId(newEl);
+}
+
+/**
+ * Insert a new sibling element (given tag) immediately after `siblingId`.
+ * Returns the new element's registry id, or `null` on failure.
+ */
+function addSiblingElement(siblingId: number, tag: string): number | null {
+  const sibling = getElementById(siblingId);
+  if (!sibling || !sibling.parentNode) return null;
+  const newEl = document.createElement(tag);
+  newEl.style.width = '100px';
+  newEl.style.height = '100px';
+  sibling.parentNode.insertBefore(newEl, sibling.nextSibling);
+  return assignId(newEl);
+}
+
+/**
+ * Deep-clone the element at `id` and insert the clone after it.
+ * Returns the clone's registry id, or `null` on failure.
+ */
+function duplicateElementById(id: number): number | null {
+  const el = getElementById(id);
+  if (!el || !el.parentNode) return null;
+  const clone = el.cloneNode(true) as Element;
+  el.parentNode.insertBefore(clone, el.nextSibling);
+  return assignId(clone);
+}
+
+/**
+ * Replace an element's tag while preserving attributes, inline styles,
+ * and children. Returns the new element's registry id, or `null`.
+ */
+function replaceElementTag(id: number, newTag: string): number | null {
+  const el = getElementById(id);
+  if (!el || !el.parentNode) return null;
+  const newEl = document.createElement(newTag);
+  for (let i = 0; i < el.attributes.length; i++) {
+    newEl.setAttribute(el.attributes[i].name, el.attributes[i].value);
+  }
+  if (el instanceof HTMLElement && newEl instanceof HTMLElement) {
+    newEl.style.cssText = el.style.cssText;
+  }
+  while (el.firstChild) newEl.appendChild(el.firstChild);
+  el.parentNode.replaceChild(newEl, el);
+  return assignId(newEl);
+}
+
+// ── Context menu state ──
+
+export interface ContextMenuState {
+  nodeId: number;
+  x: number;
+  y: number;
+}
+
+// ── useDomOperations hook ──
+
+/**
+ * Hook that provides all DOM manipulation callbacks and context menu state.
+ * Consumed by the DomTree host component.
+ */
+export function useDomOperations() {
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+  const domTree = useStore((s) => s.domTree);
+  const selectNode = useStore((s) => s.selectNode);
+  const expandToNode = useStore((s) => s.expandToNode);
+  const removeFromSelection = useStore((s) => s.removeFromSelection);
+  const clearSelection = useStore((s) => s.clearSelection);
+  const queueEdit = useStore((s) => s.queueEdit);
+
+  // -- open context menu on tree node --
+
+  const handleTreeContextMenu = useCallback(
+    (nodeId: number, x: number, y: number) => {
+      const state = useStore.getState();
+      const node = findNodeInTree(state.domTree, nodeId);
+      if (!node || PROTECTED_TAGS.has(node.tag)) return;
+      setContextMenu({ nodeId, x, y });
+    },
+    [],
+  );
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  // -- tag change --
+
+  const handleTagChange = useCallback(
+    (nodeId: number, newTag: string) => {
+      const node = findNodeInTree(useStore.getState().domTree, nodeId);
+      if (!node) return;
+      const oldTag = node.tag;
+      const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
+      const newId = replaceElementTag(nodeId, newTag);
+      if (newId === null) return;
+      rebuildDomTree();
+      selectNode(newId);
+      expandToNode(newId);
+      scrollElementIntoView(newId);
+      queueEdit({ type: 'dom', ...info, value: `tag: ${oldTag} \u2192 ${newTag}` } as Change);
+    },
+    [selectNode, expandToNode, queueEdit],
+  );
+
+  // -- delete --
+
+  const deleteElement = useCallback(
+    (nodeId: number) => {
+      const node = findNodeInTree(useStore.getState().domTree, nodeId);
+      if (!node || PROTECTED_TAGS.has(node.tag)) return;
+      const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
+      const removed = removeElementById(nodeId);
+      if (!removed) return;
+      const state = useStore.getState();
+      if (state.selectedNodeIds.length > 1) {
+        removeFromSelection(nodeId);
+      } else if (state.selectedNodeId === nodeId) {
+        clearSelection();
+      }
+      rebuildDomTree();
+      queueEdit({ type: 'dom', ...info, value: 'delete' } as Change);
+    },
+    [removeFromSelection, clearSelection, queueEdit],
+  );
+
+  const handleDeleteElement = useCallback(() => {
+    if (!contextMenu) return;
+    const ids = useStore.getState().selectedNodeIds;
+    if (ids.length > 1) {
+      const toDelete = [...ids].reverse();
+      for (const id of toDelete) deleteElement(id);
+    } else {
+      deleteElement(contextMenu.nodeId);
+    }
+    setContextMenu(null);
+  }, [contextMenu, deleteElement]);
+
+  // -- add child --
+
+  const handleAddChild = useCallback(() => {
+    if (!contextMenu) return;
+    const { nodeId } = contextMenu;
+    const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
+    const newId = addChildElement(nodeId, 'div');
+    if (newId === null) return;
+    rebuildDomTree();
+    expandToNode(nodeId);
+    selectNode(newId);
+    expandToNode(newId);
+    scrollElementIntoView(newId);
+    queueEdit({ type: 'dom', ...info, value: 'add-child div' } as Change);
+    setContextMenu(null);
+  }, [contextMenu, expandToNode, selectNode, queueEdit]);
+
+  // -- add sibling --
+
+  const handleAddSibling = useCallback(() => {
+    if (!contextMenu) return;
+    const { nodeId } = contextMenu;
+    const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
+    const newId = addSiblingElement(nodeId, 'div');
+    if (newId === null) return;
+    rebuildDomTree();
+    selectNode(newId);
+    expandToNode(newId);
+    scrollElementIntoView(newId);
+    queueEdit({ type: 'dom', ...info, value: 'add-sibling div' } as Change);
+    setContextMenu(null);
+  }, [contextMenu, selectNode, expandToNode, queueEdit]);
+
+  // -- duplicate --
+
+  const duplicateElement = useCallback(
+    (nodeId: number) => {
+      const node = findNodeInTree(useStore.getState().domTree, nodeId);
+      if (!node || PROTECTED_TAGS.has(node.tag)) return;
+      const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
+      const newId = duplicateElementById(nodeId);
+      if (newId === null) return;
+      rebuildDomTree();
+      selectNode(newId);
+      expandToNode(newId);
+      scrollElementIntoView(newId);
+      queueEdit({ type: 'dom', ...info, value: 'duplicate' } as Change);
+    },
+    [selectNode, expandToNode, queueEdit],
+  );
+
+  const handleDuplicateElement = useCallback(() => {
+    if (!contextMenu) return;
+    const ids = useStore.getState().selectedNodeIds;
+    if (ids.length > 1) {
+      for (const id of ids) duplicateElement(id);
+    } else {
+      duplicateElement(contextMenu.nodeId);
+    }
+    setContextMenu(null);
+  }, [contextMenu, duplicateElement]);
+
+  // -- keyboard shortcuts (Cmd+D = duplicate, Delete = delete) --
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const state = useStore.getState();
+      const ids = state.selectedNodeIds;
+      const nodeId = state.selectedNodeId;
+      if (nodeId === null) return;
+
+      if ((e.metaKey || e.ctrlKey) && e.code === 'KeyD') {
+        e.preventDefault();
+        for (const id of ids) duplicateElement(id);
+      } else if (e.key === 'Delete' || (e.key === 'Backspace' && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault();
+        const toDelete = [...ids].reverse();
+        for (const id of toDelete) deleteElement(id);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [duplicateElement, deleteElement]);
+
+  return {
+    contextMenu,
+    closeContextMenu,
+    handleTreeContextMenu,
+    handleTagChange,
+    deleteElement,
+    handleDeleteElement,
+    handleAddChild,
+    handleAddSibling,
+    duplicateElement,
+    handleDuplicateElement,
+  };
+}
+
+// ── ContextMenu component ──
+
+interface ContextMenuItem {
+  label: string;
+  onClick: () => void;
+  shortcut?: string;
+  danger?: boolean;
+  separator?: boolean;
+}
+
+interface ContextMenuProps {
+  x: number;
+  y: number;
+  items: ContextMenuItem[];
+  onClose: () => void;
+}
+
+function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Escape to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Clamp to viewport bounds
+  const posRef = useRef({ x, y });
+  posRef.current = { x, y };
+  useEffect(() => {
+    const el = menuRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width - 4;
+    const maxY = window.innerHeight - rect.height - 4;
+    if (posRef.current.x > maxX) el.style.left = `${maxX}px`;
+    if (posRef.current.y > maxY) el.style.top = `${maxY}px`;
+  }, []);
+
+  return (
+    <>
+      <div className={styles.backdrop} onMouseDown={onClose} />
+      <div
+        ref={menuRef}
+        className={styles.menu}
+        style={{ left: x, top: y }}
+      >
+        {items.map((item, i) => {
+          if (item.separator) {
+            return <div key={`sep-${i}`} className={styles.separator} />;
+          }
+          return (
+            <button
+              key={item.label}
+              className={`${styles.item} ${item.danger ? styles.danger : ''}`}
+              onClick={() => {
+                item.onClick();
+                onClose();
+              }}
+            >
+              <span>{item.label}</span>
+              {item.shortcut && (
+                <span className={styles.shortcut}>{item.shortcut}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ── DomContextMenu — renders contextMenu state into a portal-like overlay ──
+
+interface DomContextMenuProps {
+  contextMenu: ContextMenuState | null;
+  onClose: () => void;
+  onAddChild: () => void;
+  onAddSibling: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}
+
+export function DomContextMenu({
+  contextMenu,
+  onClose,
+  onAddChild,
+  onAddSibling,
+  onDuplicate,
+  onDelete,
+}: DomContextMenuProps) {
+  if (!contextMenu) return null;
+
+  const selectedNodeIds = useStore((s) => s.selectedNodeIds);
+  const isMulti = selectedNodeIds.length > 1;
+
+  const items: ContextMenuItem[] = isMulti
+    ? [
+        { label: `Duplicate ${selectedNodeIds.length} elements`, onClick: onDuplicate, shortcut: '\u2318D' },
+        { label: '', onClick: () => {}, separator: true },
+        { label: `Delete ${selectedNodeIds.length} elements`, onClick: onDelete, danger: true, shortcut: '\u2326' },
+      ]
+    : [
+        { label: 'Add child element', onClick: onAddChild },
+        { label: 'Add sibling element', onClick: onAddSibling },
+        { label: 'Duplicate element', onClick: onDuplicate, shortcut: '\u2318D' },
+        { label: '', onClick: () => {}, separator: true },
+        { label: 'Delete element', onClick: onDelete, danger: true, shortcut: '\u2326' },
+      ];
+
+  return (
+    <ContextMenu
+      x={contextMenu.x}
+      y={contextMenu.y}
+      items={items}
+      onClose={onClose}
+    />
+  );
+}
+
+// ── ActionBar — icon buttons shown above the tree when element selected ──
+
+
+
+export function ActionBar() {
+  const selectedNodeId = useStore((s) => s.selectedNodeId);
+  const domTree = useStore((s) => s.domTree);
+  const selectNode = useStore((s) => s.selectNode);
+  const expandToNode = useStore((s) => s.expandToNode);
+  const removeFromSelection = useStore((s) => s.removeFromSelection);
+  const clearSelection = useStore((s) => s.clearSelection);
+  const queueEdit = useStore((s) => s.queueEdit);
+
+  const isProtected = (() => {
+    if (selectedNodeId === null) return true;
+    const node = findNodeInTree(domTree, selectedNodeId);
+    return !node || PROTECTED_TAGS.has(node.tag);
+  })();
+
+  const handleAddChild = useCallback(() => {
+    if (selectedNodeId === null) return;
+    const info = getElementInfoById(useStore.getState().domTree as any, selectedNodeId);
+    const newId = addChildElement(selectedNodeId, 'div');
+    if (newId === null) return;
+    rebuildDomTree();
+    expandToNode(selectedNodeId);
+    selectNode(newId);
+    expandToNode(newId);
+    scrollElementIntoView(newId);
+    queueEdit({ type: 'dom', ...info, value: 'add-child div' } as Change);
+  }, [selectedNodeId, expandToNode, selectNode, queueEdit]);
+
+  const handleAddSibling = useCallback(() => {
+    if (selectedNodeId === null) return;
+    const info = getElementInfoById(useStore.getState().domTree as any, selectedNodeId);
+    const newId = addSiblingElement(selectedNodeId, 'div');
+    if (newId === null) return;
+    rebuildDomTree();
+    selectNode(newId);
+    expandToNode(newId);
+    scrollElementIntoView(newId);
+    queueEdit({ type: 'dom', ...info, value: 'add-sibling div' } as Change);
+  }, [selectedNodeId, selectNode, expandToNode, queueEdit]);
+
+  const handleDuplicate = useCallback(() => {
+    if (selectedNodeId === null) return;
+    const node = findNodeInTree(useStore.getState().domTree, selectedNodeId);
+    if (!node || PROTECTED_TAGS.has(node.tag)) return;
+    const info = getElementInfoById(useStore.getState().domTree as any, selectedNodeId);
+    const newId = duplicateElementById(selectedNodeId);
+    if (newId === null) return;
+    rebuildDomTree();
+    selectNode(newId);
+    expandToNode(newId);
+    scrollElementIntoView(newId);
+    queueEdit({ type: 'dom', ...info, value: 'duplicate' } as Change);
+  }, [selectedNodeId, selectNode, expandToNode, queueEdit]);
+
+  const handleDelete = useCallback(() => {
+    if (selectedNodeId === null) return;
+    const node = findNodeInTree(useStore.getState().domTree, selectedNodeId);
+    if (!node || PROTECTED_TAGS.has(node.tag)) return;
+    const info = getElementInfoById(useStore.getState().domTree as any, selectedNodeId);
+    const removed = removeElementById(selectedNodeId);
+    if (!removed) return;
+    const state = useStore.getState();
+    if (state.selectedNodeIds.length > 1) {
+      removeFromSelection(selectedNodeId);
+    } else {
+      clearSelection();
+    }
+    rebuildDomTree();
+    queueEdit({ type: 'dom', ...info, value: 'delete' } as Change);
+  }, [selectedNodeId, removeFromSelection, clearSelection, queueEdit]);
+
+  if (selectedNodeId === null) return null;
+
+  return (
+    <div className={styles.actionBar}>
+      <button
+        className={styles.actionBtn}
+        title="Add child element"
+        onClick={handleAddChild}
+        disabled={isProtected}
+      >
+        <SquarePlus size={14} />
+      </button>
+      <button
+        className={styles.actionBtn}
+        title="Add sibling element"
+        onClick={handleAddSibling}
+        disabled={isProtected}
+      >
+        <ListPlus size={14} />
+      </button>
+      <button
+        className={styles.actionBtn}
+        title="Duplicate element (\u2318D)"
+        onClick={handleDuplicate}
+        disabled={isProtected}
+      >
+        <Copy size={14} />
+      </button>
+      <button
+        className={`${styles.actionBtn} ${styles.dangerBtn}`}
+        title="Delete element (\u2326)"
+        onClick={handleDelete}
+        disabled={isProtected}
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}

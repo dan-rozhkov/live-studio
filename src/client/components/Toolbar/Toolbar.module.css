@@ -1,0 +1,145 @@
+.toolbar {
+  border: 1px solid var(--cs-border);
+  background: var(--cs-layer);
+  z-index: 5;
+  pointer-events: auto;
+  color: var(--cs-foreground);
+  border-radius: 10px;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 12px;
+  display: flex;
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 16px #0000004d;
+}
+
+.toolbarCollapsed {
+  border-radius: 8px;
+  gap: 0;
+  padding: 4px 2px;
+}
+
+.collapseToggle {
+  width: 20px;
+  height: 28px;
+  color: var(--cs-feint-text, #fff6);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  transition: color 0.1s, background 0.1s;
+  display: flex;
+}
+
+.collapseToggle:hover {
+  color: var(--cs-foreground);
+  background: var(--cs-feint);
+}
+
+.toolbarButton {
+  width: 28px;
+  height: 28px;
+  color: var(--cs-white);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  transition: background 0.1s, color 0.1s, opacity 0.1s;
+  display: flex;
+}
+
+.toolbarButton:hover {
+  background: var(--cs-feint);
+}
+
+.toolbarButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.toolbarButton:disabled:hover {
+  background: none;
+}
+
+.toolbarButton.primary {
+  background: var(--cs-accent);
+  color: var(--cs-on-accent, #000);
+}
+
+.toolbarButton.primary:hover {
+  opacity: 0.85;
+}
+
+.toolbarButton.primary:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.toolbarButton.primary:disabled:hover {
+  opacity: 0.35;
+  background: var(--cs-accent);
+}
+
+.muted {
+  opacity: 0.35;
+  cursor: pointer;
+}
+
+.toolbarButton.muted:hover {
+  background: none;
+}
+
+.toolbarButton.primary.muted:hover {
+  background: var(--cs-accent);
+  opacity: 0.5;
+}
+
+.active {
+  color: var(--cs-accent);
+  background: color-mix(in srgb, var(--cs-accent) 12%, transparent);
+}
+
+.separator {
+  background: var(--cs-border);
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+}
+
+.agentStatus {
+  align-items: center;
+  gap: 2px;
+  display: flex;
+  position: relative;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusDot.connected {
+  background: #22c55e;
+}
+
+.statusDot.polling {
+  background: #eab308;
+}
+
+.statusDot.disconnected {
+  background: #ef4444;
+}
