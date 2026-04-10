@@ -226,29 +226,14 @@ export class DevToolsBridge {
         this.pendingUserMessages.push(payload);
       }
 
-      // Flush change waiters with a snapshot to avoid race conditions.
-      const flushSnapshot = [...this.pendingChanges];
-      for (const waiter of this.waitingResolvers) {
-        clearTimeout(waiter.timer);
-        waiter.resolve(flushSnapshot);
-      }
-      this.waitingResolvers = [];
-      this.schedulePollingInactive();
+      this.flushWaitingResolvers();
       this.onUserMessage?.(payload);
       return;
     }
 
     if (msg.type === "style-update") {
       this.pendingChanges.push(...msg.changes);
-
-      // Flush change waiters with a snapshot to avoid race conditions.
-      const styleSnapshot = [...this.pendingChanges];
-      for (const waiter of this.waitingResolvers) {
-        clearTimeout(waiter.timer);
-        waiter.resolve(styleSnapshot);
-      }
-      this.waitingResolvers = [];
-      this.schedulePollingInactive();
+      this.flushWaitingResolvers();
       this.onUpdate?.(msg.changes);
     }
   }
@@ -283,6 +268,17 @@ export class DevToolsBridge {
         this.broadcastPolling(false);
       }
     }, DevToolsBridge.POLLING_GRACE_MS);
+  }
+
+  /** Flush all waiting change resolvers with an isolated snapshot. */
+  private flushWaitingResolvers(): void {
+    const snapshot = [...this.pendingChanges];
+    for (const waiter of this.waitingResolvers) {
+      clearTimeout(waiter.timer);
+      waiter.resolve(snapshot);
+    }
+    this.waitingResolvers = [];
+    this.schedulePollingInactive();
   }
 
   // ---------------------------------------------------------------------------
