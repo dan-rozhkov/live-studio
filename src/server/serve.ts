@@ -62,6 +62,20 @@ function textResult(text: string, isError?: boolean) {
   };
 }
 
+function sendNotification(
+  server: McpServer,
+  payload: Record<string, unknown>
+): void {
+  try {
+    server.server.notification({
+      method: "notifications/claude/channel",
+      params: { content: JSON.stringify(payload) },
+    });
+  } catch {
+    // Swallow — the transport may not support notifications.
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tool handler wiring
 // ---------------------------------------------------------------------------
@@ -86,19 +100,28 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
     description,
     args,
     async ({ action, timeout, reason, element, question, options, text, active }) => {
-      // --- panic ---
+      // --- actions that don't need the bridge ---
       if (action === "panic") {
         bridge.sendPanic(reason ?? "unknown", element);
         return textResult("Panic reported to extension.");
       }
-
-      // --- calm ---
       if (action === "calm") {
         bridge.sendCalm();
         return textResult("Panic cleared.");
       }
+      if (action === "message") {
+        bridge.sendAgentMessage(text ?? "");
+        return textResult("Message sent.");
+      }
+      if (action === "responding") {
+        bridge.sendAgentResponding(active ?? true);
+        return textResult("Responding state updated.");
+      }
 
-      // --- ask ---
+      // --- actions that need the bridge ---
+      const err = await ensureBridge();
+      if (err) return err;
+
       if (action === "ask") {
         if (!question || !options || options.length === 0) {
           return textResult(
@@ -106,39 +129,19 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
             true
           );
         }
-        const err = await ensureBridge();
-        if (err) return err;
         bridge.sendQuestion(question, options);
         const answer = await bridge.waitForAnswer(timeout);
         if (!answer) return textResult("No answer received within timeout.");
         return textResult(JSON.stringify({ answer }));
       }
 
-      // --- message ---
-      if (action === "message") {
-        bridge.sendAgentMessage(text ?? "");
-        return textResult("Message sent.");
-      }
-
-      // --- responding ---
-      if (action === "responding") {
-        bridge.sendAgentResponding(active ?? true);
-        return textResult("Responding state updated.");
-      }
-
-      // --- chat ---
       if (action === "chat") {
-        const err = await ensureBridge();
-        if (err) return err;
         const msg = await bridge.waitForUserMessage(timeout);
         if (!msg) return textResult("No message received within timeout.");
         return textResult(JSON.stringify(msg));
       }
 
       // --- get (default) ---
-      const err = await ensureBridge();
-      if (err) return err;
-
       const changes = await bridge.waitForUpdate(timeout, () => {
         bridge.sendReady();
       });
@@ -193,34 +196,12 @@ export async function startServer(): Promise<void> {
 
   initTool(server, bridge);
 
-  // Channel notifications — push changes and user messages to agents that
-  // support the claude/channel extension (e.g. Claude Code).  Agents that
-  // don't support channels simply ignore these notifications and fall back to
-  // polling via the tool's "get" action.
   bridge.onUpdate = (changes) => {
-    try {
-      server.server.notification({
-        method: "notifications/claude/channel",
-        params: {
-          content: JSON.stringify({ changes }),
-        },
-      });
-    } catch {
-      // Swallow — the transport may not support notifications.
-    }
+    sendNotification(server, { changes });
   };
 
   bridge.onUserMessage = (msg) => {
-    try {
-      server.server.notification({
-        method: "notifications/claude/channel",
-        params: {
-          content: JSON.stringify({ messages: [msg] }),
-        },
-      });
-    } catch {
-      // Swallow.
-    }
+    sendNotification(server, { messages: [msg] });
   };
 
   const transport = new StdioServerTransport();
