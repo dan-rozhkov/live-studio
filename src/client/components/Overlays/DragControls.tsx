@@ -76,20 +76,16 @@ function setDotGrip(
   gs: CSSStyleDeclaration,
   color: string,
   isVertical: boolean,
-  clampDim: number,
+  _clampDim: number,
 ): void {
-  const dot = `radial-gradient(circle at center, ${color} 1.5px, transparent 1.5px)`;
-  const fill = color + '20';
   if (isVertical) {
-    const w = Math.max(Math.min(8, clampDim - 2), 4);
-    gs.width = w + 'px';
-    gs.height = '16px';
-    gs.background = `${dot} 50% 2px/3px 3px no-repeat,${dot} 50% 50%/3px 3px no-repeat,${dot} 50% calc(100% - 2px)/3px 3px no-repeat,${fill}`;
+    gs.width = '1px';
+    gs.height = '10px';
+    gs.background = color;
   } else {
-    const h = Math.max(Math.min(8, clampDim - 2), 4);
-    gs.width = '16px';
-    gs.height = h + 'px';
-    gs.background = `${dot} 2px 50%/3px 3px no-repeat,${dot} 50% 50%/3px 3px no-repeat,${dot} calc(100% - 2px) 50%/3px 3px no-repeat,${fill}`;
+    gs.width = '10px';
+    gs.height = '1px';
+    gs.background = color;
   }
 }
 
@@ -127,27 +123,23 @@ function createIndicator(name: string, color: string): Indicator {
 
   const grip = document.createElement('div');
   grip.setAttribute('data-ls-visual-control', `${name}-grip`);
-  grip.style.cssText = 'border-radius:2px;transition:transform 0.15s,filter 0.15s;';
+  grip.style.cssText = 'border-radius:1px;';
   hitArea.appendChild(grip);
 
   const label = document.createElement('div');
   label.setAttribute('data-ls-visual-control', `${name}-tooltip`);
-  label.style.cssText = `position:absolute;padding:2px 6px;border-radius:4px;font-size:10px;font-family:monospace;white-space:nowrap;background:#1a1a28;color:${color};border:1px solid rgba(255,255,255,0.10);z-index:1;pointer-events:none;opacity:0;transition:opacity 0.15s;`;
+  label.style.cssText = `position:absolute;padding:2px 6px;border-radius:4px;font-size:10px;font-family:monospace;white-space:nowrap;background:${color};color:#fff;border:none;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.15s;`;
   container.appendChild(label);
 
   // Hover feedback
   hitArea.addEventListener('mouseenter', () => {
     line.style.opacity = '1';
     label.style.opacity = '1';
-    grip.style.transform = 'scale(1.3)';
-    grip.style.filter = 'brightness(1.5)';
   });
   hitArea.addEventListener('mouseleave', () => {
     if ((hitArea as any).dataset.dragging) return;
     line.style.opacity = '0';
     label.style.opacity = '0';
-    grip.style.transform = '';
-    grip.style.filter = '';
   });
 
   document.documentElement.appendChild(container);
@@ -170,8 +162,6 @@ function startDrag(
   (target as any).dataset.dragging = '1';
   line.style.opacity = '1';
   label.style.opacity = '1';
-  grip.style.transform = 'scale(1.3)';
-  grip.style.filter = 'brightness(1.8)';
   document.documentElement.style.cursor = cursor;
   document.documentElement.style.userSelect = 'none';
 }
@@ -194,8 +184,6 @@ function endDrag(
   target.removeEventListener('lostpointercapture', onUp as EventListener);
   line.style.opacity = '0';
   label.style.opacity = '0';
-  grip.style.transform = '';
-  grip.style.filter = '';
 }
 
 // ---------------------------------------------------------------------------
@@ -482,7 +470,7 @@ export function DragControls() {
 
         const label = document.createElement('div');
         label.setAttribute('data-ls-visual-control', 'radius-tooltip');
-        label.style.cssText = `position:absolute;left:12px;top:-6px;padding:2px 6px;border-radius:4px;font-size:10px;font-family:monospace;white-space:nowrap;background:#1a1a28;color:${RADIUS_COLOR};border:1px solid rgba(255,255,255,0.10);z-index:1;pointer-events:none;opacity:0;transition:opacity 0.15s;`;
+        label.style.cssText = `position:absolute;left:12px;top:-6px;padding:2px 6px;border-radius:4px;font-size:10px;font-family:monospace;white-space:nowrap;background:${RADIUS_COLOR};color:#fff;border:none;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.15s;`;
 
         container.appendChild(handle);
         container.appendChild(label);
@@ -515,6 +503,13 @@ export function DragControls() {
         const pos = positions[i];
         const ind = paddingIndicators.current[i];
         if (!ind) continue;
+
+        // Hide grip when padding value is 0
+        const numVal = parseFloat(pos.value) || 0;
+        if (numVal === 0) {
+          ind.container.style.display = 'none';
+          continue;
+        }
 
         ind.side = pos.side;
         const s = ind.container.style;
@@ -575,11 +570,18 @@ export function DragControls() {
     function syncGapPositions(positions: GapPosition[], el: Element, rect: DOMRect) {
       const cs = getComputedStyle(el);
       const gapValue = (cs.gap || cs.rowGap || '0px') === '0px' ? '0' : (cs.gap || cs.rowGap);
+      const gapNum = parseFloat(gapValue) || 0;
 
       for (let i = 0; i < positions.length; i++) {
         const pos = positions[i];
         const ind = gapIndicators.current[i];
         if (!ind) continue;
+
+        // Hide grip when gap value is 0
+        if (gapNum === 0) {
+          ind.container.style.display = 'none';
+          continue;
+        }
 
         ind.isVertical = pos.isVertical;
         const s = ind.container.style;

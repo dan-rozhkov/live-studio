@@ -182,7 +182,21 @@ export function useInlineEdit(
       ) {
         return;
       }
+      // Also skip clicks on visual control overlays (drag handles, grips)
+      if ((target as HTMLElement).dataset?.lsVisualControl || target.closest?.('[data-ls-visual-control]')) {
+        return;
+      }
       const el = getElementAtPoint(e.clientX, e.clientY);
+      const state = useStore.getState();
+      const selectedId = state.selectedNodeId;
+      // Deselect if clicking outside the currently selected element
+      if (selectedId !== null) {
+        const selectedEl = getElementById(selectedId);
+        if (!selectedEl || !el || !selectedEl.contains(el)) {
+          state.clearSelection();
+          return;
+        }
+      }
       if (!el) return;
       if (hasTextContent(el)) {
         // Let double-click handle edit; single click just selects

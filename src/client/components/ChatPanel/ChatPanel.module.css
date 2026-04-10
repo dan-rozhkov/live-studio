@@ -50,7 +50,7 @@
 
 .userMsg {
   background: var(--cs-accent);
-  color: var(--cs-layer);
+  color: #fff;
   word-break: break-word;
   white-space: pre-wrap;
   border-radius: 10px 10px 2px 10px;

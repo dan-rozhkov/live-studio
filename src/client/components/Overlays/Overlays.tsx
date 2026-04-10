@@ -23,9 +23,9 @@ const FIGMA_BLUE_LIGHT = 'rgba(13, 153, 255, 0.08)';
 const FIGMA_PURPLE = '#9747FF';
 
 // Diagonal hatching patterns
-const HATCH_MARGIN = `repeating-linear-gradient(-45deg,rgba(13,153,255,0.15),rgba(13,153,255,0.15) 1px,transparent 1px,transparent 5px)`;
-const HATCH_PADDING = `repeating-linear-gradient(-45deg,rgba(255,105,180,0.18),rgba(255,105,180,0.18) 1px,transparent 1px,transparent 5px)`;
-const HATCH_GAP = `repeating-linear-gradient(-45deg,rgba(151,71,255,0.18),rgba(151,71,255,0.18) 1px,transparent 1px,transparent 5px)`;
+const HATCH_MARGIN = `repeating-linear-gradient(-45deg,rgba(13,153,255,0.35),rgba(13,153,255,0.35) 1px,transparent 1px,transparent 5px)`;
+const HATCH_PADDING = `repeating-linear-gradient(-45deg,rgba(255,105,180,0.4),rgba(255,105,180,0.4) 1px,transparent 1px,transparent 5px)`;
+const HATCH_GAP = `repeating-linear-gradient(-45deg,rgba(151,71,255,0.4),rgba(151,71,255,0.4) 1px,transparent 1px,transparent 5px)`;
 
 // Box-model hatched areas: 4 divs for T/R/B/L
 interface BoxHatch { top: HTMLDivElement; right: HTMLDivElement; bottom: HTMLDivElement; left: HTMLDivElement }
