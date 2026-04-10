@@ -226,10 +226,11 @@ export class DevToolsBridge {
         this.pendingUserMessages.push(payload);
       }
 
-      // Flush change waiters so the MCP layer can pick up messages too.
+      // Flush change waiters with a snapshot to avoid race conditions.
+      const flushSnapshot = [...this.pendingChanges];
       for (const waiter of this.waitingResolvers) {
         clearTimeout(waiter.timer);
-        waiter.resolve(this.pendingChanges);
+        waiter.resolve(flushSnapshot);
       }
       this.waitingResolvers = [];
       this.schedulePollingInactive();
@@ -240,9 +241,11 @@ export class DevToolsBridge {
     if (msg.type === "style-update") {
       this.pendingChanges.push(...msg.changes);
 
+      // Flush change waiters with a snapshot to avoid race conditions.
+      const styleSnapshot = [...this.pendingChanges];
       for (const waiter of this.waitingResolvers) {
         clearTimeout(waiter.timer);
-        waiter.resolve(this.pendingChanges);
+        waiter.resolve(styleSnapshot);
       }
       this.waitingResolvers = [];
       this.schedulePollingInactive();
@@ -350,7 +353,7 @@ export class DevToolsBridge {
 
     if (this.pendingChanges.length > 0 || this.pendingUserMessages.length > 0) {
       this.schedulePollingInactive();
-      return Promise.resolve(this.pendingChanges);
+      return Promise.resolve([...this.pendingChanges]);
     }
 
     onWaiting?.();
