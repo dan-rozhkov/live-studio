@@ -181,60 +181,66 @@ export class DevToolsBridge {
   }
 
   private handleMessage(msg: any): void {
-    if (msg.type === "page-info") {
-      if (this.activeUrl !== msg.url) {
-        this.activeUrl = msg.url;
-        this.urlSentToAgent = false;
-      }
-      const vp = msg.viewport;
-      if (
-        !this.activeViewport ||
-        this.activeViewport.width !== vp.width ||
-        this.activeViewport.height !== vp.height
-      ) {
-        this.activeViewport = vp;
-        this.viewportSentToAgent = false;
-      }
-      return;
-    }
-
-    if (msg.type === "answer") {
-      if (this.waitingAnswerResolver) {
-        clearTimeout(this.waitingAnswerResolver.timer);
-        this.waitingAnswerResolver.resolve(msg.answer);
-        this.waitingAnswerResolver = null;
-        this.schedulePollingInactive();
-      }
-      return;
-    }
-
-    if (msg.type === "user-message") {
-      const payload: UserMessage = {
-        text: msg.text,
-        attachments: msg.attachments,
-        clientMsgId: msg.clientMsgId,
-      };
-
-      if (this.waitingUserMessageResolver) {
-        clearTimeout(this.waitingUserMessageResolver.timer);
-        this.waitingUserMessageResolver.resolve(payload);
-        this.waitingUserMessageResolver = null;
-        if (payload.clientMsgId) {
-          this.broadcast({ type: "user-message-ack", ids: [payload.clientMsgId] });
+    switch (msg.type) {
+      case "page-info": {
+        if (this.activeUrl !== msg.url) {
+          this.activeUrl = msg.url;
+          this.urlSentToAgent = false;
         }
-      } else {
-        this.pendingUserMessages.push(payload);
+        const vp = msg.viewport;
+        if (
+          !this.activeViewport ||
+          this.activeViewport.width !== vp.width ||
+          this.activeViewport.height !== vp.height
+        ) {
+          this.activeViewport = vp;
+          this.viewportSentToAgent = false;
+        }
+        break;
       }
 
-      this.flushWaitingResolvers();
-      this.onUserMessage?.(payload);
-      return;
-    }
+      case "answer": {
+        if (this.waitingAnswerResolver) {
+          clearTimeout(this.waitingAnswerResolver.timer);
+          this.waitingAnswerResolver.resolve(msg.answer);
+          this.waitingAnswerResolver = null;
+          this.schedulePollingInactive();
+        }
+        break;
+      }
 
-    if (msg.type === "style-update") {
-      this.pendingChanges.push(...msg.changes);
-      this.flushWaitingResolvers();
-      this.onUpdate?.(msg.changes);
+      case "user-message": {
+        const payload: UserMessage = {
+          text: msg.text,
+          attachments: msg.attachments,
+          clientMsgId: msg.clientMsgId,
+        };
+
+        if (this.waitingUserMessageResolver) {
+          clearTimeout(this.waitingUserMessageResolver.timer);
+          this.waitingUserMessageResolver.resolve(payload);
+          this.waitingUserMessageResolver = null;
+          if (payload.clientMsgId) {
+            this.broadcast({
+              type: "user-message-ack",
+              ids: [payload.clientMsgId],
+            });
+          }
+        } else {
+          this.pendingUserMessages.push(payload);
+        }
+
+        this.flushWaitingResolvers();
+        this.onUserMessage?.(payload);
+        break;
+      }
+
+      case "style-update": {
+        this.pendingChanges.push(...msg.changes);
+        this.flushWaitingResolvers();
+        this.onUpdate?.(msg.changes);
+        break;
+      }
     }
   }
 

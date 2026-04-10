@@ -55,9 +55,15 @@ const args = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function textResult(text: string, isError?: boolean) {
+function textResult(text: string) {
   return {
-    ...(isError ? { isError: true as const } : {}),
+    content: [{ type: "text" as const, text }],
+  };
+}
+
+function errorResult(text: string) {
+  return {
+    isError: true as const,
     content: [{ type: "text" as const, text }],
   };
 }
@@ -87,9 +93,8 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
     await bridge.waitUntilReady();
     if (!bridge.isListening) {
       const status = bridge.getStatus();
-      return textResult(
-        `Bridge failed to start. ${status.error ?? "WebSocket server is not running."}`,
-        true
+      return errorResult(
+        `Bridge failed to start. ${status.error ?? "WebSocket server is not running."}`
       );
     }
     return null;
@@ -119,55 +124,65 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
       }
 
       // --- actions that need the bridge ---
-      const err = await ensureBridge();
-      if (err) return err;
+      const bridgeError = await ensureBridge();
+      if (bridgeError) return bridgeError;
 
       if (action === "ask") {
         if (!question || !options || options.length === 0) {
-          return textResult(
-            "The 'ask' action requires 'question' and non-empty 'options'.",
-            true
+          return errorResult(
+            "The 'ask' action requires 'question' and non-empty 'options'."
           );
         }
         bridge.sendQuestion(question, options);
         const answer = await bridge.waitForAnswer(timeout);
-        if (!answer) return textResult("No answer received within timeout.");
+        if (!answer) return errorResult("No answer received within timeout.");
         return textResult(JSON.stringify({ answer }));
       }
 
       if (action === "chat") {
         const msg = await bridge.waitForUserMessage(timeout);
-        if (!msg) return textResult("No message received within timeout.");
+        if (!msg) return errorResult("No message received within timeout.");
         return textResult(JSON.stringify(msg));
       }
 
       // --- get (default) ---
-      const changes = await bridge.waitForUpdate(timeout, () => {
-        bridge.sendReady();
-      });
-
-      const messages = bridge.consumeUserMessages();
-
-      if (!changes && messages.length === 0) {
-        return textResult(
-          "No pending updates. Call this tool again to continue waiting."
-        );
-      }
-
-      const url = bridge.consumeUrl();
-      const viewport = bridge.consumeViewport();
-
-      const response: Record<string, unknown> = {
-        changes: changes ?? [],
-      };
-      if (changes && changes.length > 0) bridge.consumeChanges();
-      if (url) response.url = url;
-      if (viewport) response.viewport = viewport;
-      if (messages.length > 0) response.messages = messages;
-
-      return textResult(JSON.stringify(response));
+      return handleGetAction(bridge, timeout);
     }
   );
+}
+
+/** Handle the default 'get' action — poll for changes, messages, url, viewport. */
+async function handleGetAction(
+  bridge: DevToolsBridge,
+  timeout: number
+): Promise<{
+  content: { type: "text"; text: string }[];
+  isError?: true;
+}> {
+  const changes = await bridge.waitForUpdate(timeout, () => {
+    bridge.sendReady();
+  });
+
+  const messages = bridge.consumeUserMessages();
+
+  if (!changes && messages.length === 0) {
+    return textResult(
+      "No pending updates. Call this tool again to continue waiting."
+    );
+  }
+
+  const url = bridge.consumeUrl();
+  const viewport = bridge.consumeViewport();
+
+  const response: Record<string, unknown> = {
+    changes: changes ?? [],
+  };
+  if (changes && changes.length > 0) bridge.consumeChanges();
+  if (url) response.url = url;
+  if (viewport) response.viewport = viewport;
+  if (messages.length > 0) response.messages = messages;
+
+  return textResult(JSON.stringify(response));
 }
 
 // ---------------------------------------------------------------------------
