@@ -7,7 +7,7 @@
  */
 
 import { h } from 'preact';
-import { useCallback } from 'preact/hooks';
+import { useCallback, useEffect } from 'preact/hooks';
 
 import { useStore } from '../state/store';
 import { getElementById, scrollElementIntoView } from '../bridge/dom-bridge';
@@ -132,6 +132,18 @@ export function InPagePanel() {
   });
 
   // ── 2. Store subscriptions ───────────────────────────────────────────
+
+  // ── Theme sync ──────────────────────────────────────────────────────
+  const theme = useStore((s) => s.theme);
+  useEffect(() => {
+    const host = document.querySelector('live-studio-panel');
+    if (!host) return;
+    if (theme === 'light') {
+      host.setAttribute('data-theme', 'light');
+    } else {
+      host.removeAttribute('data-theme');
+    }
+  }, [theme]);
 
   const navigatorOpen = useStore((s) => s.panels.navigator.open);
   const navigatorTab = useStore((s) => s.panels.navigator.activeTab);

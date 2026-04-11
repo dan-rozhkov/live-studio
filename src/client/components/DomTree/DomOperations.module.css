@@ -14,7 +14,7 @@
   background: var(--ls-bg-panel);
   border: 1px solid var(--ls-border);
   border-radius: var(--ls-radius);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--ls-shadow-lg);
   font-family: var(--ls-font);
   font-size: 12px;
 }

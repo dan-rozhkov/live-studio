@@ -15,7 +15,7 @@
   bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  box-shadow: 0 4px 16px #0000004d;
+  box-shadow: var(--ls-shadow-lg);
 }
 
 .toolbarCollapsed {
@@ -48,7 +48,7 @@
 .toolbarButton {
   width: 28px;
   height: 28px;
-  color: var(--cs-white);
+  color: var(--cs-foreground);
   cursor: pointer;
   background: none;
   border: none;

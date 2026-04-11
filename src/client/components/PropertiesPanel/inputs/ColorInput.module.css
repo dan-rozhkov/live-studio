@@ -9,7 +9,7 @@
   display: flex;
   position: fixed;
   overflow: hidden;
-  box-shadow: 0 8px 32px #00000080;
+  box-shadow: var(--ls-shadow-lg);
 }
 
 .header {

@@ -14,7 +14,7 @@
   display: flex;
   position: fixed;
   overflow: hidden;
-  box-shadow: 0 8px 32px #0006;
+  box-shadow: var(--ls-shadow-lg);
 }
 
 .panel[data-dock="bottom"] {
@@ -88,7 +88,7 @@
 }
 
 .tab:hover:not(:disabled) {
-  color: var(--cs-white);
+  color: var(--cs-foreground);
   background: var(--cs-feint);
 }
 

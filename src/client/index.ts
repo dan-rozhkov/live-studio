@@ -93,6 +93,33 @@ const THEME_CSS = /* css */ `
     pointer-events: none;
   }
 
+  :host([data-theme="light"]) {
+    --ls-bg: #f5f5f7;
+    --ls-bg-surface: #ffffff;
+    --ls-bg-hover: #ededf0;
+    --ls-bg-active: #e0e0e5;
+    --ls-border: #d8d8e0;
+    --ls-text: #1a1a2e;
+    --ls-text-secondary: #5a5a72;
+    --ls-text-muted: #8888a0;
+    --ls-accent: #4a6cf7;
+    --ls-accent-hover: #3a5ce0;
+    --ls-accent-active: #2a4cd0;
+    --ls-danger: #dc3545;
+    --ls-success: #28a745;
+    --ls-warning: #d4912a;
+
+    --ls-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --ls-shadow-lg: 0 4px 24px rgba(0, 0, 0, 0.08);
+
+    --cs-black: #ffffff;
+    --cs-on-accent: #ffffff;
+    --cs-checker: repeating-conic-gradient(#d8d8e0 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
+    --cs-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235a5a72' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+    color-scheme: light;
+  }
+
   *, *::before, *::after {
     box-sizing: border-box;
   }
@@ -173,13 +200,20 @@ export function startStudio(options: StartStudioOptions = {}): () => void {
   // --- 4. Inject font into the host document ---
   const fontLink = injectFont();
 
-  // --- 5. Append host element to body ---
+  // --- 5. Set initial theme from localStorage ---
+  try {
+    if (localStorage.getItem('livestudio-theme') === 'light') {
+      host.setAttribute('data-theme', 'light');
+    }
+  } catch { /* noop */ }
+
+  // --- 6. Append host element to body ---
   document.body.appendChild(host);
 
-  // --- 6. Render Preact tree ---
+  // --- 7. Render Preact tree ---
   render(h(InPagePanel, null), mountPoint);
 
-  // --- 7. Return cleanup function ---
+  // --- 8. Return cleanup function ---
   return () => {
     render(null, mountPoint);
     host.remove();

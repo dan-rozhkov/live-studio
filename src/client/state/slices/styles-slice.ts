@@ -75,6 +75,7 @@ export const createStylesSlice = (set: ImmerSet, get: GetState): StylesSlice => 
       if (prop) {
         prop.value = value;
       }
+      state.computedStyles[name] = value;
     }),
 
   setSelectedAttributes: (attrs) =>

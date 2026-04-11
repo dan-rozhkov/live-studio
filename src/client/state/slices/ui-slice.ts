@@ -7,6 +7,7 @@ export interface UiSlice {
   splitAxis: Record<string, boolean>;
   splitCorners: Record<string, boolean>;
   showMinMax: Record<string, 'min' | 'max' | 'both' | null>;
+  theme: 'dark' | 'light';
 
   setPickingElement: (picking: boolean) => void;
   setDrawingElement: (drawing: boolean) => void;
@@ -15,6 +16,7 @@ export interface UiSlice {
   toggleSplitAxis: (prop: string) => void;
   toggleSplitCorners: (prop: string) => void;
   toggleMinMax: (prop: string, which: 'min' | 'max') => void;
+  toggleTheme: () => void;
 }
 
 type ImmerSet = (fn: (state: UiSlice) => void) => void;
@@ -28,6 +30,13 @@ export const createUiSlice = (set: ImmerSet, _get: () => UiSlice): UiSlice => ({
   splitAxis: {},
   splitCorners: {},
   showMinMax: {},
+  theme: (() => {
+    try {
+      return (localStorage.getItem('livestudio-theme') as 'dark' | 'light') || 'dark';
+    } catch {
+      return 'dark' as const;
+    }
+  })(),
 
   setPickingElement: (picking) =>
     set((state) => {
@@ -74,5 +83,11 @@ export const createUiSlice = (set: ImmerSet, _get: () => UiSlice): UiSlice => ({
       } else {
         state.showMinMax[prop] = null;
       }
+    }),
+
+  toggleTheme: () =>
+    set((state) => {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem('livestudio-theme', state.theme); } catch { /* noop */ }
     }),
 });
