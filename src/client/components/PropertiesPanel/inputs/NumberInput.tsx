@@ -192,13 +192,17 @@ export function NumberInput({
   const sliderMax = resolved.sliderMax;
   const resolvedUnit = resolved.unit;
 
-  const roundDisplay = useCallback((v: string) => {
+  const displayNumber = useCallback((v: string) => {
     const p = parseNumericValue(v);
-    if (p.unit === 'px') return `${Math.round(p.num)}px`;
+    if (p.unit === 'px') return String(Math.round(p.num));
+    if (p.unit) {
+      const decimals = resolved.step < 1 ? (String(resolved.step).split('.')[1]?.length ?? 2) : 0;
+      return String(parseFloat(p.num.toFixed(decimals)));
+    }
     return v;
-  }, []);
+  }, [resolved.step]);
 
-  const [localValue, setLocalValue] = useState(() => roundDisplay(value));
+  const [localValue, setLocalValue] = useState(() => displayNumber(value));
   const dragStartY = useRef(0);
   const dragStartValue = useRef(0);
   const isEditingRef = useRef(false);
@@ -206,9 +210,9 @@ export function NumberInput({
 
   useEffect(() => {
     if (!isEditingRef.current) {
-      setLocalValue(roundDisplay(value));
+      setLocalValue(displayNumber(value));
     }
-  }, [value, roundDisplay]);
+  }, [value, displayNumber]);
 
   const formatValue = useCallback(
     (num: number) => {
@@ -216,19 +220,26 @@ export function NumberInput({
       const rounded = Math.round(clamped / resolvedStep) * resolvedStep;
       const decimals = resolvedStep < 1 ? (String(resolvedStep).split('.')[1]?.length ?? 2) : 0;
       const fixed = parseFloat(rounded.toFixed(decimals));
-      return resolvedUnit ? `${fixed}${resolvedUnit}` : String(fixed);
+      return String(fixed);
     },
-    [resolvedUnit, resolvedStep, resolvedMin, resolvedMax],
+    [resolvedStep, resolvedMin, resolvedMax],
+  );
+
+  const commitValue = useCallback(
+    (displayNum: string) => {
+      return resolvedUnit ? `${displayNum}${resolvedUnit}` : displayNum;
+    },
+    [resolvedUnit],
   );
 
   const handleSliderInput = useCallback(
     (e: JSX.TargetedEvent<HTMLInputElement>) => {
       const num = parseFloat((e.target as HTMLInputElement).value);
-      const newValue = formatValue(num);
-      setLocalValue(newValue);
-      onChange(newValue);
+      const display = formatValue(num);
+      setLocalValue(display);
+      onChange(commitValue(display));
     },
-    [formatValue, onChange],
+    [formatValue, commitValue, onChange],
   );
 
   const handleInputChange = useCallback((e: JSX.TargetedEvent<HTMLInputElement>) => {
@@ -238,19 +249,20 @@ export function NumberInput({
 
   const handleInputBlur = useCallback(() => {
     isEditingRef.current = false;
-    if (localValue !== value) {
-      onChange(localValue);
+    const committed = commitValue(localValue);
+    if (committed !== value) {
+      onChange(committed);
     }
-  }, [localValue, value, onChange]);
+  }, [localValue, value, commitValue, onChange]);
 
   const handleKeyDown = useCallback(
     (e: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
         isEditingRef.current = false;
-        onChange(localValue);
+        onChange(commitValue(localValue));
       }
     },
-    [localValue, onChange],
+    [localValue, commitValue, onChange],
   );
 
   const handleFocus = useCallback(() => {
@@ -259,25 +271,25 @@ export function NumberInput({
   }, [onFocus]);
 
   const handleStepUp = useCallback(() => {
-    const num = parseNumericValue(localValue).num + resolvedStep;
-    const newValue = formatValue(num);
-    setLocalValue(newValue);
-    onChange(newValue);
-  }, [localValue, resolvedStep, formatValue, onChange]);
+    const num = parseFloat(localValue) + resolvedStep;
+    const display = formatValue(num);
+    setLocalValue(display);
+    onChange(commitValue(display));
+  }, [localValue, resolvedStep, formatValue, commitValue, onChange]);
 
   const handleStepDown = useCallback(() => {
-    const num = parseNumericValue(localValue).num - resolvedStep;
-    const newValue = formatValue(num);
-    setLocalValue(newValue);
-    onChange(newValue);
-  }, [localValue, resolvedStep, formatValue, onChange]);
+    const num = parseFloat(localValue) - resolvedStep;
+    const display = formatValue(num);
+    setLocalValue(display);
+    onChange(commitValue(display));
+  }, [localValue, resolvedStep, formatValue, commitValue, onChange]);
 
   const handleStepperPointerDown = useCallback(
     (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
       (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
       dragStartY.current = e.clientY;
-      dragStartValue.current = parseNumericValue(localValue).num;
+      dragStartValue.current = parseFloat(localValue) || 0;
       hasDragged.current = false;
     },
     [localValue],
@@ -291,11 +303,11 @@ export function NumberInput({
       hasDragged.current = true;
       const steps = Math.round(delta / 4);
       const num = dragStartValue.current + steps * resolvedStep;
-      const newValue = formatValue(num);
-      setLocalValue(newValue);
-      onChange(newValue);
+      const display = formatValue(num);
+      setLocalValue(display);
+      onChange(commitValue(display));
     },
-    [resolvedStep, formatValue, onChange],
+    [resolvedStep, formatValue, commitValue, onChange],
   );
 
   const handleStepperPointerUp = useCallback(
@@ -313,8 +325,8 @@ export function NumberInput({
   );
 
   /* ── Slider fill calculation ── */
-  const localParsed = parseNumericValue(localValue);
-  const fillPct = Math.max(0, Math.min(100, ((localParsed.num - sliderMin) / (sliderMax - sliderMin)) * 100));
+  const localNum = parseFloat(localValue) || 0;
+  const fillPct = Math.max(0, Math.min(100, ((localNum - sliderMin) / (sliderMax - sliderMin)) * 100));
   const isBipolar = sliderMin < 0 && sliderMax > 0;
   const zeroPct = isBipolar ? ((0 - sliderMin) / (sliderMax - sliderMin)) * 100 : 0;
   const track = 'color-mix(in srgb, var(--cs-foreground) 12%, transparent)';
@@ -340,7 +352,7 @@ export function NumberInput({
             min={sliderMin}
             max={sliderMax}
             step={resolvedStep}
-            value={localParsed.num}
+            value={localNum}
             onInput={handleSliderInput}
             style={{ '--cs-fill-bg': fillBg } as any}
           />
@@ -355,6 +367,7 @@ export function NumberInput({
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
           />
+          {resolvedUnit && <span class={styles.unitSuffix}>{resolvedUnit}</span>}
           <div
             class={styles.steppers}
             onPointerDown={handleStepperPointerDown}

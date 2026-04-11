@@ -14,10 +14,11 @@ export interface PairedNumberInputProps {
   endContent?: preact.ComponentChildren;
 }
 
-function roundPxValue(v: string): string {
+function extractDisplay(v: string): { display: string; unit: string } {
   const { num, unit } = parseNumericValue(v);
-  if (unit === 'px') return `${Math.round(num)}px`;
-  return v;
+  if (unit === 'px') return { display: String(Math.round(num)), unit };
+  if (unit) return { display: String(num), unit };
+  return { display: v, unit: '' };
 }
 
 function PairedField({
@@ -29,12 +30,22 @@ function PairedField({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const [local, setLocal] = useState(() => roundPxValue(value));
+  const parsed = extractDisplay(value);
+  const [local, setLocal] = useState(() => parsed.display);
+  const unitRef = useRef(parsed.unit);
   const isEditing = useRef(false);
 
   useEffect(() => {
-    if (!isEditing.current) setLocal(roundPxValue(value));
+    if (!isEditing.current) {
+      const p = extractDisplay(value);
+      setLocal(p.display);
+      unitRef.current = p.unit;
+    }
   }, [value]);
+
+  const commit = useCallback((v: string) => {
+    return unitRef.current ? `${v}${unitRef.current}` : v;
+  }, []);
 
   const handleInput = useCallback((e: JSX.TargetedEvent<HTMLInputElement>) => {
     isEditing.current = true;
@@ -43,17 +54,18 @@ function PairedField({
 
   const handleBlur = useCallback(() => {
     isEditing.current = false;
-    if (local !== value) onChange(local);
-  }, [local, value, onChange]);
+    const committed = commit(local);
+    if (committed !== value) onChange(committed);
+  }, [local, value, commit, onChange]);
 
   const handleKeyDown = useCallback(
     (e: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
         isEditing.current = false;
-        onChange(local);
+        onChange(commit(local));
       }
     },
-    [local, onChange],
+    [local, commit, onChange],
   );
 
   const handleFocus = useCallback(() => {
@@ -72,6 +84,7 @@ function PairedField({
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
       />
+      {unitRef.current && <span class={styles.pairedInputSuffix}>{unitRef.current}</span>}
     </div>
   );
 }

@@ -96,7 +96,7 @@
   border-radius: 4px;
   outline: none;
   min-width: 0;
-  padding: 2px 18px 2px 4px;
+  padding: 2px 32px 2px 4px;
   font-size: 12px;
 }
 
@@ -107,6 +107,17 @@
 .numberInput:focus {
   border-color: transparent;
   border-bottom-color: var(--cs-accent);
+}
+
+.unitSuffix {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--cs-feint-text);
+  font-size: 10px;
+  pointer-events: none;
+  user-select: none;
 }
 
 .steppers {
@@ -300,6 +311,14 @@
   min-width: 0;
   outline: none;
   box-sizing: border-box;
+}
+
+.pairedInputSuffix {
+  color: var(--cs-feint-text);
+  font-size: 10px;
+  padding-right: 6px;
+  flex-shrink: 0;
+  user-select: none;
 }
 
 .pairedEndIcon {
