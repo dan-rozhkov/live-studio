@@ -1,15 +1,16 @@
 /* Shared input styles — dark theme, compact sizing */
 
 .row {
-  grid-template-columns: 76px 1fr 20px;
+  display: flex;
   align-items: center;
-  column-gap: 8px;
-  height: 28px;
-  display: grid;
+  gap: 8px;
+  min-height: 28px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .row > :only-child {
-  grid-column: 1 / -1;
+  flex: 1;
 }
 
 .indent .label {
@@ -17,14 +18,15 @@
 }
 
 .label {
-  font-variation-settings: "opsz" 28, "wght" 480;
-  color: var(--cs-label-text);
+  color: var(--cs-feint-text);
   text-align: left;
   white-space: nowrap;
   text-overflow: ellipsis;
-  min-width: 0;
-  font-size: 12px;
+  width: 76px;
+  flex-shrink: 0;
+  font-size: 11px;
   overflow: hidden;
+  user-select: none;
 }
 
 .label.mono {
@@ -38,7 +40,7 @@
   background-color: var(--cs-input-bg);
   background-image: var(--cs-select-chevron);
   border: 1px solid var(--cs-input-border);
-  width: 100%;
+  flex: 1;
   min-width: 0;
   height: 24px;
   color: var(--cs-foreground);
@@ -59,7 +61,7 @@
 .textInput {
   background: var(--cs-input-bg);
   border: 1px solid var(--cs-input-border);
-  width: 100%;
+  flex: 1;
   min-width: 0;
   color: var(--cs-foreground);
   font-family: var(--cs-font-mono);
@@ -190,6 +192,7 @@
 }
 
 .sliderGroup {
+  flex: 1;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -246,4 +249,254 @@
 
 .toggleOn .thumb {
   transform: translateX(12px);
+}
+
+/* ── Paired inputs (W/H, X/Y side by side) ── */
+
+.pairedRow {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  min-height: 28px;
+}
+
+.pairedInput {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--cs-input-bg);
+  border-radius: 4px;
+  border: 1px solid transparent;
+  min-width: 0;
+  height: 24px;
+  box-sizing: border-box;
+}
+
+.pairedInput:hover {
+  border-color: var(--cs-input-border);
+}
+
+.pairedInput:focus-within {
+  border-color: var(--cs-accent);
+}
+
+.pairedInputPrefix {
+  color: var(--cs-feint-text);
+  font-size: 11px;
+  padding: 0 2px 0 6px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.pairedInputField {
+  background: none;
+  border: none;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  font-size: 12px;
+  padding: 2px 4px;
+  width: 100%;
+  min-width: 0;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.pairedEndIcon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  padding: 0;
+}
+
+.pairedEndIcon:hover {
+  color: var(--cs-foreground);
+  background: var(--cs-feint);
+}
+
+/* ── Icon toggle group ── */
+
+.iconToggleGroup {
+  display: flex;
+  flex: 1;
+  gap: 1px;
+  background: var(--cs-input-bg);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.iconToggleBtn {
+  flex: 1;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--cs-feint-text);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.1s, background 0.1s;
+}
+
+.iconToggleBtn:hover {
+  color: var(--cs-foreground);
+  background: color-mix(in srgb, var(--cs-foreground) 8%, transparent);
+}
+
+.iconToggleBtnActive {
+  background: var(--cs-feint-solid);
+  color: var(--cs-foreground);
+}
+
+.iconToggleBtnActive:hover {
+  background: var(--cs-feint-solid);
+}
+
+/* ── Label-above layout (Appearance section) ── */
+
+.labelAboveRow {
+  display: flex;
+  gap: 8px;
+}
+
+.labelAboveCell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.labelAboveLabel {
+  font-size: 11px;
+  color: var(--cs-feint-text);
+  user-select: none;
+}
+
+/* ── Compact color row (Fill / Stroke) ── */
+
+.compactColorRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+}
+
+.compactColorHex {
+  background: var(--cs-input-bg);
+  border: 1px solid transparent;
+  min-width: 0;
+  flex: 1;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  border-radius: 4px;
+  outline: none;
+  padding: 2px 6px;
+  font-size: 12px;
+  box-sizing: border-box;
+  height: 24px;
+}
+
+.compactColorHex:hover {
+  border-color: var(--cs-input-border);
+}
+
+.compactColorHex:focus {
+  border-color: var(--cs-accent);
+}
+
+.compactColorOpacity {
+  background: var(--cs-input-bg);
+  border: 1px solid transparent;
+  width: 52px;
+  flex-shrink: 0;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font-mono);
+  border-radius: 4px;
+  outline: none;
+  padding: 2px 6px;
+  font-size: 12px;
+  box-sizing: border-box;
+  height: 24px;
+  text-align: right;
+}
+
+.compactColorOpacity:hover {
+  border-color: var(--cs-input-border);
+}
+
+.compactColorOpacity:focus {
+  border-color: var(--cs-accent);
+}
+
+.compactColorAction {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  padding: 0;
+}
+
+.compactColorAction:hover {
+  color: var(--cs-foreground);
+}
+
+/* ── Sub-label ── */
+
+.subLabel {
+  font-size: 11px;
+  color: var(--cs-feint-text);
+  padding: 4px 0 2px;
+  user-select: none;
+}
+
+/* ── Checkbox row ── */
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--cs-input-border);
+  border-radius: 3px;
+  background: var(--cs-input-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cs-foreground);
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.checkboxChecked {
+  background: var(--cs-accent);
+  border-color: var(--cs-accent);
+}
+
+.checkboxLabel {
+  font-size: 12px;
+  color: var(--cs-foreground);
 }

@@ -1,11 +1,14 @@
 import { h, Fragment } from 'preact';
 import { useState, useCallback, useMemo } from 'preact/hooks';
-import { ChevronRight } from 'lucide-preact';
+import { ChevronRight, ChevronDown } from 'lucide-preact';
 import { useStore } from '../../state/store';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { LayoutSection } from './sections/LayoutSection';
 import { TextSection } from './sections/TextSection';
-import { StylesSection } from './sections/StylesSection';
+import { AppearanceSection } from './sections/AppearanceSection';
+import { FillSection } from './sections/FillSection';
+import { StrokeSection } from './sections/StrokeSection';
+import { EffectsSection } from './sections/EffectsSection';
 import { TransformSection } from './sections/TransformSection';
 import { AttributesSection } from './sections/AttributesSection';
 import { getElementById } from '../../bridge/dom-bridge';
@@ -41,22 +44,35 @@ function buildSelectorFromNode(node: DomNode): string {
 interface SectionProps {
   title: string;
   defaultOpen?: boolean;
+  collapsible?: boolean;
+  actions?: preact.ComponentChildren;
   children: preact.ComponentChildren;
 }
 
-function Section({ title, defaultOpen = true, children }: SectionProps) {
+function Section({ title, defaultOpen = true, collapsible = true, actions, children }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const isOpen = collapsible ? open : true;
 
   return (
     <div class={styles.section}>
-      <div class={styles.sectionHeader} onClick={() => setOpen(!open)}>
-        <ChevronRight
-          size={10}
-          class={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}
-        />
-        {title}
+      <div
+        class={`${styles.sectionHeader} ${collapsible ? styles.sectionHeaderClickable : ''}`}
+        onClick={collapsible ? () => setOpen(!open) : undefined}
+      >
+        {collapsible && (
+          <ChevronRight
+            size={10}
+            class={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
+          />
+        )}
+        <span class={styles.sectionTitle}>{title}</span>
+        {actions && (
+          <div class={styles.sectionActions} onClick={(e) => e.stopPropagation()}>
+            {actions}
+          </div>
+        )}
       </div>
-      {open && <div class={styles.sectionBody}>{children}</div>}
+      {isOpen && <div class={styles.sectionBody}>{children}</div>}
     </div>
   );
 }
@@ -200,24 +216,43 @@ export function PropertiesPanel() {
     <div class={styles.panel}>
       <div class={styles.header}>
         <span class={styles.headerTag}>{selectedNode.tag}</span>
+        <ChevronDown size={12} style={{ color: 'var(--cs-feint-text)' }} />
         <span class={styles.headerSelector}>{selector}</span>
       </div>
       <div class={styles.sections}>
-        <Section title="Layout">
+        <Section title="Layout" collapsible={false}>
           <LayoutSection
             getValue={getValue}
             onChange={handleChange}
             parentDisplay={parentDisplay}
           />
         </Section>
-        <Section title="Text">
+        <Section title="Text" collapsible={false}>
           <TextSection
             getValue={getValue}
             onChange={handleChange}
           />
         </Section>
-        <Section title="Styles">
-          <StylesSection
+        <Section title="Appearance" collapsible={false}>
+          <AppearanceSection
+            getValue={getValue}
+            onChange={handleChange}
+          />
+        </Section>
+        <Section title="Fill">
+          <FillSection
+            getValue={getValue}
+            onChange={handleChange}
+          />
+        </Section>
+        <Section title="Stroke" defaultOpen={false}>
+          <StrokeSection
+            getValue={getValue}
+            onChange={handleChange}
+          />
+        </Section>
+        <Section title="Effects" defaultOpen={false}>
+          <EffectsSection
             getValue={getValue}
             onChange={handleChange}
           />

@@ -1,8 +1,15 @@
 import { h, Fragment } from 'preact';
+import {
+  AlignStartHorizontal, AlignCenterHorizontal,
+  AlignEndHorizontal, AlignHorizontalJustifyCenter,
+  Underline, Strikethrough, RemoveFormatting,
+} from 'lucide-preact';
 import { NumberInput } from '../inputs/NumberInput';
 import { TextInput } from '../inputs/TextInput';
 import { SelectInput } from '../inputs/SelectInput';
 import { ColorInput } from '../inputs/ColorInput';
+import { IconToggleGroup } from '../inputs/IconToggleGroup';
+import inputStyles from '../inputs/inputs.module.css';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -12,10 +19,17 @@ const FONT_WEIGHT_OPTIONS = [
   '100', '200', '300', '400', '500', '600', '700', '800', '900',
 ];
 
-const TEXT_ALIGN_OPTIONS = ['left', 'center', 'right', 'justify'];
+const TEXT_ALIGN_OPTIONS = [
+  { value: 'left', icon: AlignStartHorizontal, title: 'Left' },
+  { value: 'center', icon: AlignCenterHorizontal, title: 'Center' },
+  { value: 'right', icon: AlignEndHorizontal, title: 'Right' },
+  { value: 'justify', icon: AlignHorizontalJustifyCenter, title: 'Justify' },
+];
 
 const TEXT_DECORATION_OPTIONS = [
-  'none', 'underline', 'overline', 'line-through',
+  { value: 'none', icon: RemoveFormatting, title: 'None' },
+  { value: 'underline', icon: Underline, title: 'Underline' },
+  { value: 'line-through', icon: Strikethrough, title: 'Strikethrough' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -28,6 +42,14 @@ export interface TextSectionProps {
 }
 
 export function TextSection({ getValue, onChange }: TextSectionProps) {
+  const textDecoration = getValue('text-decoration');
+  // text-decoration can contain multiple keywords; pick first match
+  const decoValue = textDecoration.includes('underline')
+    ? 'underline'
+    : textDecoration.includes('line-through')
+      ? 'line-through'
+      : 'none';
+
   return (
     <>
       <TextInput
@@ -55,13 +77,16 @@ export function TextSection({ getValue, onChange }: TextSectionProps) {
         value={getValue('color')}
         onChange={(v) => onChange('color', v)}
       />
-      <SelectInput
-        label="text-align"
-        displayName="Align"
-        value={getValue('text-align')}
-        options={TEXT_ALIGN_OPTIONS}
-        onChange={(v) => onChange('text-align', v)}
-      />
+
+      <div class={inputStyles.row}>
+        <label class={inputStyles.label}>Align</label>
+        <IconToggleGroup
+          options={TEXT_ALIGN_OPTIONS}
+          value={getValue('text-align')}
+          onChange={(v) => onChange('text-align', v)}
+        />
+      </div>
+
       <NumberInput
         label="line-height"
         displayName="Line Height"
@@ -74,13 +99,15 @@ export function TextSection({ getValue, onChange }: TextSectionProps) {
         value={getValue('letter-spacing')}
         onChange={(v) => onChange('letter-spacing', v)}
       />
-      <SelectInput
-        label="text-decoration"
-        displayName="Decoration"
-        value={getValue('text-decoration')}
-        options={TEXT_DECORATION_OPTIONS}
-        onChange={(v) => onChange('text-decoration', v)}
-      />
+
+      <div class={inputStyles.row}>
+        <label class={inputStyles.label}>Decoration</label>
+        <IconToggleGroup
+          options={TEXT_DECORATION_OPTIONS}
+          value={decoValue}
+          onChange={(v) => onChange('text-decoration', v)}
+        />
+      </div>
     </>
   );
 }

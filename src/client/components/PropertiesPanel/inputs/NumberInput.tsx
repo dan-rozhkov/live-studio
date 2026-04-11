@@ -192,7 +192,13 @@ export function NumberInput({
   const sliderMax = resolved.sliderMax;
   const resolvedUnit = resolved.unit;
 
-  const [localValue, setLocalValue] = useState(value);
+  const roundDisplay = useCallback((v: string) => {
+    const p = parseNumericValue(v);
+    if (p.unit === 'px') return `${Math.round(p.num)}px`;
+    return v;
+  }, []);
+
+  const [localValue, setLocalValue] = useState(() => roundDisplay(value));
   const dragStartY = useRef(0);
   const dragStartValue = useRef(0);
   const isEditingRef = useRef(false);
@@ -200,9 +206,9 @@ export function NumberInput({
 
   useEffect(() => {
     if (!isEditingRef.current) {
-      setLocalValue(value);
+      setLocalValue(roundDisplay(value));
     }
-  }, [value]);
+  }, [value, roundDisplay]);
 
   const formatValue = useCallback(
     (num: number) => {
@@ -321,7 +327,7 @@ export function NumberInput({
     fillBg = `linear-gradient(to right, var(--cs-accent) ${fillPct}%, ${track} ${fillPct}%)`;
   }
 
-  const labelText = displayName || label || '';
+  const labelText = displayName !== undefined ? displayName : (label || '');
 
   return (
     <div class={`${styles.row} ${indent ? styles.indent : ''}`}>

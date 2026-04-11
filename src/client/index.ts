@@ -74,7 +74,7 @@ const THEME_CSS = /* css */ `
     --cs-fill-bg: var(--ls-bg);
     --cs-font: var(--ls-font);
     --cs-font-mono: var(--ls-font-mono);
-    --cs-select-chevron: var(--ls-text-muted);
+    --cs-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236c6c88' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     --cs-checker: repeating-conic-gradient(#3a3a52 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
 
     /* Reset — prevent host page styles from leaking in */

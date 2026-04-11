@@ -32,9 +32,8 @@
 
 .headerTag {
   font-weight: 600;
-  font-size: 12px;
-  color: var(--cs-accent);
-  font-family: var(--cs-font-mono);
+  font-size: 14px;
+  color: var(--cs-foreground);
 }
 
 .headerSelector {
@@ -82,18 +81,51 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
+  padding: 8px 12px;
   user-select: none;
-  color: var(--cs-label-text);
-  font-variation-settings: "opsz" 28, "wght" 560;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--cs-foreground);
+  font-variation-settings: "opsz" 28, "wght" 600;
+  font-size: 13px;
 }
 
-.sectionHeader:hover {
+.sectionHeaderClickable {
+  cursor: pointer;
+}
+
+.sectionHeaderClickable:hover {
   background: color-mix(in srgb, var(--cs-foreground) 4%, transparent);
+}
+
+.sectionTitle {
+  flex: 1;
+  min-width: 0;
+}
+
+.sectionActions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.sectionActionBtn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--cs-feint-text);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.1s, background 0.1s;
+}
+
+.sectionActionBtn:hover {
+  color: var(--cs-foreground);
+  background: color-mix(in srgb, var(--cs-foreground) 8%, transparent);
 }
 
 .chevron {
@@ -109,8 +141,8 @@
 }
 
 .sectionBody {
-  padding: 4px 12px 8px;
+  padding: 2px 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }

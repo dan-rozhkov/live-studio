@@ -1,6 +1,15 @@
 import { h, Fragment } from 'preact';
+import { useState } from 'preact/hooks';
+import {
+  ArrowRight, ArrowDown, ArrowLeft, ArrowUp,
+  AlignStartVertical, AlignCenterVertical, AlignEndVertical,
+  StretchVertical, Baseline, Minus, ChevronRight,
+} from 'lucide-preact';
 import { NumberInput } from '../inputs/NumberInput';
 import { SelectInput } from '../inputs/SelectInput';
+import { PairedNumberInput } from '../inputs/PairedNumberInput';
+import { IconToggleGroup } from '../inputs/IconToggleGroup';
+import inputStyles from '../inputs/inputs.module.css';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -21,12 +30,22 @@ const ALIGN_ITEMS_OPTIONS = [
 ];
 
 const ALIGN_SELF_OPTIONS = [
-  'auto', 'stretch', 'flex-start', 'center', 'flex-end', 'baseline',
+  { value: 'auto', icon: Minus, title: 'Auto' },
+  { value: 'stretch', icon: StretchVertical, title: 'Stretch' },
+  { value: 'flex-start', icon: AlignStartVertical, title: 'Start' },
+  { value: 'center', icon: AlignCenterVertical, title: 'Center' },
+  { value: 'flex-end', icon: AlignEndVertical, title: 'End' },
+  { value: 'baseline', icon: Baseline, title: 'Baseline' },
 ];
 
 const FLEX_WRAP_OPTIONS = ['nowrap', 'wrap', 'wrap-reverse'];
 
-const FLEX_DIRECTION_OPTIONS = ['row', 'column', 'row-reverse', 'column-reverse'];
+const FLEX_DIRECTION_OPTIONS = [
+  { value: 'row', icon: ArrowRight, title: 'Row' },
+  { value: 'column', icon: ArrowDown, title: 'Column' },
+  { value: 'row-reverse', icon: ArrowLeft, title: 'Row Reverse' },
+  { value: 'column-reverse', icon: ArrowUp, title: 'Column Reverse' },
+];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -45,6 +64,7 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
   const isGrid = display === 'grid' || display === 'inline-grid';
   const showGap = isFlex || isGrid;
   const isFlexChild = parentDisplay === 'flex' || parentDisplay === 'inline-flex';
+  const [expandMinMax, setExpandMinMax] = useState(false);
 
   return (
     <>
@@ -64,110 +84,101 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
         onChange={(v) => onChange('position', v)}
       />
 
-      {/* Sizing */}
-      <NumberInput
-        label="width"
-        displayName="Width"
-        value={getValue('width')}
-        onChange={(v) => onChange('width', v)}
-      />
-      <NumberInput
-        label="height"
-        displayName="Height"
-        value={getValue('height')}
-        onChange={(v) => onChange('height', v)}
-      />
-      <NumberInput
-        label="min-width"
-        displayName="Min W"
-        value={getValue('min-width')}
-        onChange={(v) => onChange('min-width', v)}
-        showSlider={false}
-      />
-      <NumberInput
-        label="min-height"
-        displayName="Min H"
-        value={getValue('min-height')}
-        onChange={(v) => onChange('min-height', v)}
-        showSlider={false}
-      />
-      <NumberInput
-        label="max-width"
-        displayName="Max W"
-        value={getValue('max-width')}
-        onChange={(v) => onChange('max-width', v)}
-        showSlider={false}
-      />
-      <NumberInput
-        label="max-height"
-        displayName="Max H"
-        value={getValue('max-height')}
-        onChange={(v) => onChange('max-height', v)}
-        showSlider={false}
+      {/* Flex direction toggles */}
+      {isFlex && (
+        <>
+          <div class={inputStyles.subLabel}>Flow</div>
+          <IconToggleGroup
+            options={FLEX_DIRECTION_OPTIONS}
+            value={getValue('flex-direction') || 'row'}
+            onChange={(v) => onChange('flex-direction', v)}
+          />
+        </>
+      )}
+
+      {/* Dimensions */}
+      <div class={inputStyles.subLabel}>Dimensions</div>
+      <PairedNumberInput
+        prefixA="W"
+        prefixB="H"
+        valueA={getValue('width')}
+        valueB={getValue('height')}
+        onChangeA={(v) => onChange('width', v)}
+        onChangeB={(v) => onChange('height', v)}
+        endContent={
+          <button
+            class={inputStyles.pairedEndIcon}
+            title={expandMinMax ? 'Hide min/max' : 'Show min/max'}
+            onClick={() => setExpandMinMax(!expandMinMax)}
+          >
+            <ChevronRight size={10} style={{ transform: expandMinMax ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
+          </button>
+        }
       />
 
+      {/* Min/Max */}
+      {expandMinMax && (
+        <>
+          <PairedNumberInput
+            prefixA="Min W"
+            prefixB="Min H"
+            valueA={getValue('min-width')}
+            valueB={getValue('min-height')}
+            onChangeA={(v) => onChange('min-width', v)}
+            onChangeB={(v) => onChange('min-height', v)}
+          />
+          <PairedNumberInput
+            prefixA="Max W"
+            prefixB="Max H"
+            valueA={getValue('max-width')}
+            valueB={getValue('max-height')}
+            onChangeA={(v) => onChange('max-width', v)}
+            onChangeB={(v) => onChange('max-height', v)}
+          />
+        </>
+      )}
+
       {/* Margin */}
-      <NumberInput
-        label="margin-top"
-        displayName="Margin T"
-        value={getValue('margin-top')}
-        onChange={(v) => onChange('margin-top', v)}
+      <div class={inputStyles.subLabel}>Margin</div>
+      <PairedNumberInput
+        prefixA="T"
+        prefixB="B"
+        valueA={getValue('margin-top')}
+        valueB={getValue('margin-bottom')}
+        onChangeA={(v) => onChange('margin-top', v)}
+        onChangeB={(v) => onChange('margin-bottom', v)}
       />
-      <NumberInput
-        label="margin-right"
-        displayName="Margin R"
-        value={getValue('margin-right')}
-        onChange={(v) => onChange('margin-right', v)}
-      />
-      <NumberInput
-        label="margin-bottom"
-        displayName="Margin B"
-        value={getValue('margin-bottom')}
-        onChange={(v) => onChange('margin-bottom', v)}
-      />
-      <NumberInput
-        label="margin-left"
-        displayName="Margin L"
-        value={getValue('margin-left')}
-        onChange={(v) => onChange('margin-left', v)}
+      <PairedNumberInput
+        prefixA="L"
+        prefixB="R"
+        valueA={getValue('margin-left')}
+        valueB={getValue('margin-right')}
+        onChangeA={(v) => onChange('margin-left', v)}
+        onChangeB={(v) => onChange('margin-right', v)}
       />
 
       {/* Padding */}
-      <NumberInput
-        label="padding-top"
-        displayName="Padding T"
-        value={getValue('padding-top')}
-        onChange={(v) => onChange('padding-top', v)}
+      <div class={inputStyles.subLabel}>Padding</div>
+      <PairedNumberInput
+        prefixA="T"
+        prefixB="B"
+        valueA={getValue('padding-top')}
+        valueB={getValue('padding-bottom')}
+        onChangeA={(v) => onChange('padding-top', v)}
+        onChangeB={(v) => onChange('padding-bottom', v)}
       />
-      <NumberInput
-        label="padding-right"
-        displayName="Padding R"
-        value={getValue('padding-right')}
-        onChange={(v) => onChange('padding-right', v)}
-      />
-      <NumberInput
-        label="padding-bottom"
-        displayName="Padding B"
-        value={getValue('padding-bottom')}
-        onChange={(v) => onChange('padding-bottom', v)}
-      />
-      <NumberInput
-        label="padding-left"
-        displayName="Padding L"
-        value={getValue('padding-left')}
-        onChange={(v) => onChange('padding-left', v)}
+      <PairedNumberInput
+        prefixA="L"
+        prefixB="R"
+        valueA={getValue('padding-left')}
+        valueB={getValue('padding-right')}
+        onChangeA={(v) => onChange('padding-left', v)}
+        onChangeB={(v) => onChange('padding-right', v)}
       />
 
       {/* Flex container properties */}
       {isFlex && (
         <>
-          <SelectInput
-            label="flex-direction"
-            displayName="Direction"
-            value={getValue('flex-direction') || 'row'}
-            options={FLEX_DIRECTION_OPTIONS}
-            onChange={(v) => onChange('flex-direction', v)}
-          />
           <SelectInput
             label="justify-content"
             displayName="Justify"
@@ -232,13 +243,14 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
             onChange={(v) => onChange('flex-basis', v)}
             showSlider={false}
           />
-          <SelectInput
-            label="align-self"
-            displayName="Align Self"
-            value={getValue('align-self') || 'auto'}
-            options={ALIGN_SELF_OPTIONS}
-            onChange={(v) => onChange('align-self', v)}
-          />
+          <div class={inputStyles.row}>
+            <label class={inputStyles.label}>Align Self</label>
+            <IconToggleGroup
+              options={ALIGN_SELF_OPTIONS}
+              value={getValue('align-self') || 'auto'}
+              onChange={(v) => onChange('align-self', v)}
+            />
+          </div>
         </>
       )}
     </>
