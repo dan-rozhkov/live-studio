@@ -10,8 +10,7 @@ import { h } from 'preact';
 import { useCallback, useEffect } from 'preact/hooks';
 
 import { useStore } from '../state/store';
-import { getElementById, scrollElementIntoView } from '../bridge/dom-bridge';
-import { fetchComputedStyles } from '../bridge/style-bridge';
+import { selectAndFetchStyles } from '../utils/select-node';
 
 // Hooks
 import { usePageBridge } from '../hooks/use-page-bridge';
@@ -19,6 +18,8 @@ import { useElementPicker } from '../hooks/use-element-picker';
 import { useMcpDirect } from '../hooks/use-mcp-direct';
 import { useInlineEdit } from '../hooks/use-inline-edit';
 import { useKeyboard } from '../hooks/use-keyboard';
+import { useUndoStore } from '../hooks/use-undo';
+import { applyUndoEntry } from '../hooks/use-apply-undo';
 
 // Components
 import { Toolbar } from './Toolbar/Toolbar';
@@ -31,36 +32,6 @@ import { useDomOperations, DomContextMenu, ActionBar } from './DomTree/DomOperat
 import { PropertiesPanel } from './PropertiesPanel/PropertiesPanel';
 import { ChatPanel, ChatActions } from './ChatPanel/ChatPanel';
 import { QuestionPopover } from './QuestionPopover';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Select a node by ID: update the store selection, expand the tree path,
- * scroll the element into view, and fetch its computed styles into the store.
- */
-function selectAndFetchStyles(nodeId: number): void {
-  const store = useStore.getState();
-  store.selectNode(nodeId);
-  store.expandToNode(nodeId);
-  scrollElementIntoView(nodeId);
-
-  const el = getElementById(nodeId);
-  if (el) {
-    const computed = fetchComputedStyles(el);
-    store.setComputedStyles(computed);
-
-    // Derive parent display for layout context
-    const parent = el.parentElement;
-    if (parent) {
-      const parentCs = window.getComputedStyle(parent);
-      store.setParentDisplay(parentCs.display);
-    } else {
-      store.setParentDisplay('');
-    }
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Tab definitions
@@ -112,6 +83,12 @@ export function InPagePanel() {
   // Inline text editing (double-click to edit)
   const handleInlineEditComplete = useCallback(
     (id: number, oldText: string, newText: string) => {
+      useUndoStore.getState().push({
+        type: 'text',
+        nodeId: id,
+        oldValue: oldText,
+        newValue: newText,
+      });
       useStore.getState().queueEdit({
         type: 'text',
         element: `[data-ls-id="${id}"]`,
@@ -125,6 +102,7 @@ export function InPagePanel() {
 
   // Keyboard shortcuts
   useKeyboard({
+    applyEntry: applyUndoEntry,
     sendEdit,
     handleSelectNode,
     deleteElement: domOps.deleteElement,

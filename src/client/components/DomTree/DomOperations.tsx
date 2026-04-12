@@ -11,10 +11,13 @@ import {
   fetchDomTree,
   getElementInfoById,
   scrollElementIntoView,
+  snapshotElement,
+  getParentId,
 } from '../../bridge/dom-bridge';
 import type { DomNode } from '../../state/slices/dom-slice';
 import type { Change } from '../../state/slices/edit-slice';
 import type { DomTreeNode } from '../../bridge/dom-bridge';
+import { useUndoStore } from '../../hooks/use-undo';
 import styles from './DomOperations.module.css';
 
 // ── Helpers ──
@@ -46,7 +49,7 @@ function convertTree(node: DomTreeNode): DomNode {
 }
 
 /** Rebuild the DOM tree snapshot and push it into the store. */
-function rebuildDomTree(): void {
+export function rebuildDomTree(): void {
   const raw = fetchDomTree();
   if (!raw) return;
   useStore.getState().setDomTree(convertTree(raw));
@@ -58,7 +61,7 @@ function rebuildDomTree(): void {
  * Remove element from the live DOM.
  * Returns `true` if the element was successfully removed.
  */
-function removeElementById(id: number): boolean {
+export function removeElementById(id: number): boolean {
   const el = getElementById(id);
   if (!el || !el.parentNode) return false;
   el.parentNode.removeChild(el);
@@ -69,7 +72,7 @@ function removeElementById(id: number): boolean {
  * Insert a new child element (given tag) as the last child of `parentId`.
  * Returns the new element's registry id, or `null` on failure.
  */
-function addChildElement(parentId: number, tag: string): number | null {
+export function addChildElement(parentId: number, tag: string): number | null {
   const parent = getElementById(parentId);
   if (!parent) return null;
   const newEl = document.createElement(tag);
@@ -83,7 +86,7 @@ function addChildElement(parentId: number, tag: string): number | null {
  * Insert a new sibling element (given tag) immediately after `siblingId`.
  * Returns the new element's registry id, or `null` on failure.
  */
-function addSiblingElement(siblingId: number, tag: string): number | null {
+export function addSiblingElement(siblingId: number, tag: string): number | null {
   const sibling = getElementById(siblingId);
   if (!sibling || !sibling.parentNode) return null;
   const newEl = document.createElement(tag);
@@ -97,7 +100,7 @@ function addSiblingElement(siblingId: number, tag: string): number | null {
  * Deep-clone the element at `id` and insert the clone after it.
  * Returns the clone's registry id, or `null` on failure.
  */
-function duplicateElementById(id: number): number | null {
+export function duplicateElementById(id: number): number | null {
   const el = getElementById(id);
   if (!el || !el.parentNode) return null;
   const clone = el.cloneNode(true) as Element;
@@ -109,7 +112,7 @@ function duplicateElementById(id: number): number | null {
  * Replace an element's tag while preserving attributes, inline styles,
  * and children. Returns the new element's registry id, or `null`.
  */
-function replaceElementTag(id: number, newTag: string): number | null {
+export function replaceElementTag(id: number, newTag: string): number | null {
   const el = getElementById(id);
   if (!el || !el.parentNode) return null;
   const newEl = document.createElement(newTag);
@@ -172,6 +175,7 @@ export function useDomOperations() {
       const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
       const newId = replaceElementTag(nodeId, newTag);
       if (newId === null) return;
+      useUndoStore.getState().pushDom({ type: 'dom', action: 'tag-change', nodeId: newId, oldTag, newTag });
       rebuildDomTree();
       selectNode(newId);
       expandToNode(newId);
@@ -188,8 +192,10 @@ export function useDomOperations() {
       const node = findNodeInTree(useStore.getState().domTree, nodeId);
       if (!node || PROTECTED_TAGS.has(node.tag)) return;
       const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
+      const snap = snapshotElement(nodeId);
       const removed = removeElementById(nodeId);
       if (!removed) return;
+      useUndoStore.getState().pushDom({ type: 'dom', action: 'delete', nodeId, ...snap });
       const state = useStore.getState();
       if (state.selectedNodeIds.length > 1) {
         removeFromSelection(nodeId);
@@ -222,6 +228,7 @@ export function useDomOperations() {
     const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
     const newId = addChildElement(nodeId, 'div');
     if (newId === null) return;
+    useUndoStore.getState().pushDom({ type: 'dom', action: 'add', nodeId: newId, parentId: nodeId });
     rebuildDomTree();
     expandToNode(nodeId);
     selectNode(newId);
@@ -239,6 +246,7 @@ export function useDomOperations() {
     const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
     const newId = addSiblingElement(nodeId, 'div');
     if (newId === null) return;
+    useUndoStore.getState().pushDom({ type: 'dom', action: 'add', nodeId: newId, parentId: getParentId(nodeId), siblingId: nodeId });
     rebuildDomTree();
     selectNode(newId);
     expandToNode(newId);
@@ -256,6 +264,7 @@ export function useDomOperations() {
       const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
       const newId = duplicateElementById(nodeId);
       if (newId === null) return;
+      useUndoStore.getState().pushDom({ type: 'dom', action: 'duplicate', nodeId, newNodeId: newId });
       rebuildDomTree();
       selectNode(newId);
       expandToNode(newId);
@@ -459,6 +468,7 @@ export function ActionBar() {
     const info = getElementInfoById(useStore.getState().domTree as any, selectedNodeId);
     const newId = addChildElement(selectedNodeId, 'div');
     if (newId === null) return;
+    useUndoStore.getState().pushDom({ type: 'dom', action: 'add', nodeId: newId, parentId: selectedNodeId });
     rebuildDomTree();
     expandToNode(selectedNodeId);
     selectNode(newId);
@@ -472,6 +482,7 @@ export function ActionBar() {
     const info = getElementInfoById(useStore.getState().domTree as any, selectedNodeId);
     const newId = addSiblingElement(selectedNodeId, 'div');
     if (newId === null) return;
+    useUndoStore.getState().pushDom({ type: 'dom', action: 'add', nodeId: newId, parentId: getParentId(selectedNodeId), siblingId: selectedNodeId });
     rebuildDomTree();
     selectNode(newId);
     expandToNode(newId);
@@ -486,6 +497,7 @@ export function ActionBar() {
     const info = getElementInfoById(useStore.getState().domTree as any, selectedNodeId);
     const newId = duplicateElementById(selectedNodeId);
     if (newId === null) return;
+    useUndoStore.getState().pushDom({ type: 'dom', action: 'duplicate', nodeId: selectedNodeId, newNodeId: newId });
     rebuildDomTree();
     selectNode(newId);
     expandToNode(newId);
@@ -498,8 +510,10 @@ export function ActionBar() {
     const node = findNodeInTree(useStore.getState().domTree, selectedNodeId);
     if (!node || PROTECTED_TAGS.has(node.tag)) return;
     const info = getElementInfoById(useStore.getState().domTree as any, selectedNodeId);
+    const snap = snapshotElement(selectedNodeId);
     const removed = removeElementById(selectedNodeId);
     if (!removed) return;
+    useUndoStore.getState().pushDom({ type: 'dom', action: 'delete', nodeId: selectedNodeId, ...snap });
     const state = useStore.getState();
     if (state.selectedNodeIds.length > 1) {
       removeFromSelection(selectedNodeId);

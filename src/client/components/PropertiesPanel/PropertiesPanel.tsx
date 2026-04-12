@@ -1,6 +1,6 @@
 import { h, Fragment } from 'preact';
 import { useState, useCallback, useMemo } from 'preact/hooks';
-import { ChevronRight, ChevronDown } from 'lucide-preact';
+import { ChevronRight, ChevronDown, Undo2, Redo2 } from 'lucide-preact';
 import { useStore } from '../../state/store';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { LayoutSection } from './sections/LayoutSection';
@@ -12,6 +12,8 @@ import { EffectsSection } from './sections/EffectsSection';
 import { TransformSection } from './sections/TransformSection';
 import { AttributesSection } from './sections/AttributesSection';
 import { getElementById } from '../../bridge/dom-bridge';
+import { useUndoStore } from '../../hooks/use-undo';
+import { applyUndoEntry } from '../../hooks/use-apply-undo';
 import styles from './PropertiesPanel.module.css';
 
 // ---------------------------------------------------------------------------
@@ -88,6 +90,18 @@ export function PropertiesPanel() {
   const parentDisplay = useStore((s) => s.parentDisplay);
   const queueEdit = useStore((s) => s.queueEdit);
   const updateProperty = useStore((s) => s.updateProperty);
+  const hasPast = useUndoStore((s) => s.past.length > 0);
+  const hasFuture = useUndoStore((s) => s.future.length > 0);
+
+  const handleUndo = useCallback(() => {
+    const entry = useUndoStore.getState().undo();
+    if (entry) applyUndoEntry(entry, 'undo');
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    const entry = useUndoStore.getState().redo();
+    if (entry) applyUndoEntry(entry, 'redo');
+  }, []);
 
   const selectedNode = useMemo(
     () => (selectedNodeId !== null ? findNodeInTree(domTree, selectedNodeId) : null),
@@ -120,6 +134,14 @@ export function PropertiesPanel() {
       // Update local property
       updateProperty(prop, newValue);
 
+      useUndoStore.getState().push({
+        type: 'style',
+        nodeId: selectedNodeId,
+        property: prop,
+        oldValue,
+        newValue,
+      });
+
       // Queue edit for MCP
       queueEdit({
         type: 'style',
@@ -137,6 +159,14 @@ export function PropertiesPanel() {
     (name: string, newValue: string) => {
       const oldValue = (selectedNode?.attributes ?? {})[name] ?? '';
       if (oldValue === newValue) return;
+
+      useUndoStore.getState().push({
+        type: 'attribute',
+        nodeId: selectedNodeId,
+        property: name,
+        oldValue,
+        newValue,
+      });
 
       // Apply to live DOM
       if (selectedNodeId !== null) {
@@ -157,9 +187,16 @@ export function PropertiesPanel() {
 
   const handleAttributeDelete = useCallback(
     (name: string) => {
-      // Remove from live DOM
       if (selectedNodeId !== null) {
         const el = getElementById(selectedNodeId);
+        const oldValue = el?.getAttribute(name) ?? '';
+        useUndoStore.getState().pushDom({
+          type: 'attribute-delete',
+          nodeId: selectedNodeId,
+          property: name,
+          oldValue,
+        });
+        // Remove from live DOM
         if (el) el.removeAttribute(name);
       }
 
@@ -177,6 +214,11 @@ export function PropertiesPanel() {
   const handleAttributeRename = useCallback(
     (oldName: string, newName: string) => {
       const value = (selectedNode?.attributes ?? {})[oldName] ?? '';
+
+      useUndoStore.getState().pushBatch([
+        { type: 'attribute-delete', nodeId: selectedNodeId, property: oldName, oldValue: value },
+        { type: 'attribute', nodeId: selectedNodeId, property: newName, oldValue: '', newValue: value },
+      ]);
 
       // Apply to live DOM
       if (selectedNodeId !== null) {
@@ -218,6 +260,24 @@ export function PropertiesPanel() {
         <span class={styles.headerTag}>{selectedNode.tag}</span>
         <ChevronDown size={12} style={{ color: 'var(--cs-feint-text)' }} />
         <span class={styles.headerSelector}>{selector}</span>
+        <div class={styles.headerActions}>
+          <button
+            class={styles.headerBtn}
+            onClick={handleUndo}
+            disabled={!hasPast}
+            title="Undo (\u2318Z)"
+          >
+            <Undo2 size={14} />
+          </button>
+          <button
+            class={styles.headerBtn}
+            onClick={handleRedo}
+            disabled={!hasFuture}
+            title="Redo (\u21E7\u2318Z)"
+          >
+            <Redo2 size={14} />
+          </button>
+        </div>
       </div>
       <div class={styles.sections}>
         <Section title="Layout" collapsible={false}>

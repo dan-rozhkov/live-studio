@@ -333,3 +333,28 @@ export function scrollElementIntoView(id: number): void {
   const el = elements.get(id);
   if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
+
+/** Snapshot of an element's position in the DOM, used for undo. */
+export interface ElementSnapshot {
+  html: string;
+  parentId: number | undefined;
+  siblingId: number | null;
+}
+
+/** Capture an element's HTML and positional info before removal. */
+export function snapshotElement(id: number): ElementSnapshot {
+  const el = getElementById(id);
+  const html = el?.outerHTML ?? '';
+  const parentEl = el?.parentElement;
+  const parentId = parentEl ? assignId(parentEl) : undefined;
+  const nextSibling = el?.nextElementSibling;
+  const siblingId = nextSibling ? assignId(nextSibling) : null;
+  return { html, parentId, siblingId };
+}
+
+/** Get the assigned ID of an element's parent, if any. */
+export function getParentId(id: number): number | undefined {
+  const el = getElementById(id);
+  const parent = el?.parentElement;
+  return parent ? assignId(parent) : undefined;
+}

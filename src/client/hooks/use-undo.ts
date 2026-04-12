@@ -46,6 +46,12 @@ interface UndoState {
   clear: () => void;
 }
 
+const MAX_HISTORY = 200;
+
+function trimPast(past: UndoOp[]): UndoOp[] {
+  return past.length > MAX_HISTORY ? past.slice(past.length - MAX_HISTORY) : past;
+}
+
 export const useUndoStore = create<UndoState>()((set, get) => ({
   past: [],
   future: [],
@@ -68,7 +74,7 @@ export const useUndoStore = create<UndoState>()((set, get) => ({
       });
     } else {
       set({
-        past: [...past, op],
+        past: trimPast([...past, op]),
         future: [],
       });
     }
@@ -77,7 +83,7 @@ export const useUndoStore = create<UndoState>()((set, get) => ({
   pushDom: (op) => {
     const { past } = get();
     set({
-      past: [...past, op],
+      past: trimPast([...past, op]),
       future: [],
     });
   },
@@ -90,7 +96,7 @@ export const useUndoStore = create<UndoState>()((set, get) => ({
     }
     const { past } = get();
     set({
-      past: [...past, { type: 'batch', operations: ops }],
+      past: trimPast([...past, { type: 'batch', operations: ops }]),
       future: [],
     });
   },

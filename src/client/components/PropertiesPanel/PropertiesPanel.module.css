@@ -46,6 +46,39 @@
   min-width: 0;
 }
 
+.headerActions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.headerBtn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--cs-feint-text);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.1s, background 0.1s;
+}
+
+.headerBtn:hover:not(:disabled) {
+  color: var(--cs-foreground);
+  background: color-mix(in srgb, var(--cs-foreground) 8%, transparent);
+}
+
+.headerBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .sections {
   flex: 1;
   overflow-y: auto;
