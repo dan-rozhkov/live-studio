@@ -26,6 +26,11 @@ export interface UserMessage {
   clientMsgId?: string;
 }
 
+/** WebSocket with heartbeat tracking. */
+interface AliveWebSocket extends WebSocket {
+  isAlive: boolean;
+}
+
 /** A waiter that resolves with a value or null on timeout. */
 interface Waiter<T> {
   resolve: (value: T | null) => void;
@@ -76,6 +81,8 @@ export class DevToolsBridge {
   private pollingGraceTimer: ReturnType<typeof setTimeout> | null = null;
   private lastBroadcastedPolling: boolean | null = null;
 
+  private pingInterval: ReturnType<typeof setInterval> | null = null;
+
   private readonly port: number;
 
   constructor(port?: number) {
@@ -106,7 +113,7 @@ export class DevToolsBridge {
   private start(retried = false): Promise<void> {
     return new Promise<void>((resolve) => {
       try {
-        this.wss = new WebSocketServer({ port: this.port });
+        this.wss = new WebSocketServer({ port: this.port, maxPayload: 10 * 1024 * 1024 });
       } catch (err: any) {
         this.startError = `Failed to create WebSocket server: ${err?.message ?? err}`;
         resolve();
@@ -119,6 +126,7 @@ export class DevToolsBridge {
         console.error(
           `[live-studio] WebSocket server listening on port ${this.port}`
         );
+        this.startPingInterval();
         resolve();
       });
 
@@ -151,13 +159,19 @@ export class DevToolsBridge {
     if (!this.wss) return;
 
     this.wss.on("connection", (ws: WebSocket) => {
+      const alive = ws as AliveWebSocket;
       this.clients.add(ws);
+      alive.isAlive = true;
       console.error(
         `[live-studio] Client connected (${this.clients.size} total)`
       );
 
       // Immediately tell the new client the current polling state.
       ws.send(JSON.stringify({ type: "polling", active: this.pollingActive }));
+
+      ws.on("pong", () => {
+        alive.isAlive = true;
+      });
 
       ws.on("message", (data: Buffer | string) => {
         let msg: any;
@@ -178,6 +192,22 @@ export class DevToolsBridge {
         );
       });
     });
+  }
+
+  private startPingInterval(): void {
+    if (this.pingInterval) clearInterval(this.pingInterval);
+    this.pingInterval = setInterval(() => {
+      for (const client of this.clients) {
+        const alive = client as AliveWebSocket;
+        if (alive.isAlive === false) {
+          client.terminate();
+          this.clients.delete(client);
+          continue;
+        }
+        alive.isAlive = false;
+        client.ping();
+      }
+    }, 30_000);
   }
 
   private handleMessage(msg: any): void {
@@ -491,6 +521,11 @@ export class DevToolsBridge {
 
   /** Shut down the WebSocket server and clean up all pending waiters. */
   stop(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+
     if (this.pollingGraceTimer) {
       clearTimeout(this.pollingGraceTimer);
       this.pollingGraceTimer = null;

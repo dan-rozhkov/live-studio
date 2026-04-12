@@ -323,7 +323,20 @@ export function Overlays() {
       if (!el!.isConnected) { hideAll(); return; }
 
       const quad = getElementQuad(el!);
-      const key = `${quad.untransformedX},${quad.untransformedY},${quad.width},${quad.height},${quad.cssTransform}`;
+      const cs = getComputedStyle(el!);
+
+      // Include box-model values in key so hatching updates when padding/margin/gap change
+      const pt = parseFloat(cs.paddingTop) || 0;
+      const pr = parseFloat(cs.paddingRight) || 0;
+      const pb = parseFloat(cs.paddingBottom) || 0;
+      const pl = parseFloat(cs.paddingLeft) || 0;
+      const mt = parseFloat(cs.marginTop) || 0;
+      const mr = parseFloat(cs.marginRight) || 0;
+      const mb = parseFloat(cs.marginBottom) || 0;
+      const ml = parseFloat(cs.marginLeft) || 0;
+      const gap = cs.gap || cs.rowGap || '0';
+
+      const key = `${quad.untransformedX},${quad.untransformedY},${quad.width},${quad.height},${quad.cssTransform},${Math.round(pt)},${Math.round(pr)},${Math.round(pb)},${Math.round(pl)},${Math.round(mt)},${Math.round(mr)},${Math.round(mb)},${Math.round(ml)},${gap}`;
 
       if (key !== prevKey) {
         prevKey = key;
@@ -350,7 +363,6 @@ export function Overlays() {
         labelRef.current!.style.top = (y - 18) + 'px';
 
         // Size badge
-        const cs = getComputedStyle(el!);
         const rw = parseFloat(cs.width) || w;
         const rh = parseFloat(cs.height) || h;
         sizeRef.current!.textContent = `${Math.round(rw)} × ${Math.round(rh)}`;
@@ -360,17 +372,9 @@ export function Overlays() {
         sizeRef.current!.style.top = (y + h + 4) + 'px';
 
         // Padding hatching (pink)
-        const pt = parseFloat(cs.paddingTop) || 0;
-        const pr = parseFloat(cs.paddingRight) || 0;
-        const pb = parseFloat(cs.paddingBottom) || 0;
-        const pl = parseFloat(cs.paddingLeft) || 0;
         positionHatch(paddingHatchRef.current!, x, y, w, h, pt, pr, pb, pl);
 
         // Margin hatching (blue)
-        const mt = parseFloat(cs.marginTop) || 0;
-        const mr = parseFloat(cs.marginRight) || 0;
-        const mb = parseFloat(cs.marginBottom) || 0;
-        const ml = parseFloat(cs.marginLeft) || 0;
         positionHatch(marginHatchRef.current!, x - ml, y - mt, w + ml + mr, h + mt + mb, mt, mr, mb, ml);
 
         // Gap hatching (purple)
@@ -386,7 +390,7 @@ export function Overlays() {
 
           if (gapV > 0 || colGap > 0 || rowGap > 0) {
             const children = Array.from(el.children).filter(
-              (c) => getComputedStyle(c).position !== 'absolute' && getComputedStyle(c).display !== 'none'
+              (c) => { const s = getComputedStyle(c); return s.position !== 'absolute' && s.display !== 'none'; }
             );
             let gapIdx = 0;
             for (let ci = 1; ci < children.length; ci++) {
@@ -418,8 +422,7 @@ export function Overlays() {
 
         // Layout box for transformed elements
         if (quad.hasTransform) {
-          const selfCs = getComputedStyle(el!);
-          const selfTransformed = selfCs.transform && selfCs.transform !== 'none';
+          const selfTransformed = cs.transform && cs.transform !== 'none';
           if (selfTransformed) {
             if (!layoutBoxRef.current) {
               const lb = document.createElement('div');

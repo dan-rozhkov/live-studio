@@ -4,6 +4,7 @@ import fs from "fs";
 
 const isWatch = process.argv.includes("--watch");
 const isMinify = process.argv.includes("--minify");
+const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
 /**
  * Plugin that injects the generated CSS into the JS bundle as an exported string.
@@ -38,6 +39,9 @@ const serverConfig = {
   banner: { js: "#!/usr/bin/env node" },
   sourcemap: !isMinify,
   minify: isMinify,
+  define: {
+    __VERSION__: JSON.stringify(pkg.version),
+  },
   external: [
     "@modelcontextprotocol/sdk",
     "ws",

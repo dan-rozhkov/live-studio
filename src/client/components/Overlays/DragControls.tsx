@@ -209,10 +209,10 @@ function computePaddingPositions(el: Element, rect: DOMRect): PaddingPosition[] 
   const h = rect.height;
 
   return [
-    { top: 0, left: 0, width: w, height: Math.max(pt, 2), side: 'top', value: cs.paddingTop },
-    { top: h - Math.max(pb, 2), left: 0, width: w, height: Math.max(pb, 2), side: 'bottom', value: cs.paddingBottom },
-    { top: pt, left: 0, width: Math.max(pl, 2), height: h - pt - pb, side: 'left', value: cs.paddingLeft },
-    { top: pt, left: w - Math.max(pr, 2), width: Math.max(pr, 2), height: h - pt - pb, side: 'right', value: cs.paddingRight },
+    { top: 0, left: 0, width: w, height: Math.max(pt, 2), side: 'top', value: Math.round(pt) + 'px' },
+    { top: h - Math.max(pb, 2), left: 0, width: w, height: Math.max(pb, 2), side: 'bottom', value: Math.round(pb) + 'px' },
+    { top: pt, left: 0, width: Math.max(pl, 2), height: h - pt - pb, side: 'left', value: Math.round(pl) + 'px' },
+    { top: pt, left: w - Math.max(pr, 2), width: Math.max(pr, 2), height: h - pt - pb, side: 'right', value: Math.round(pr) + 'px' },
   ];
 }
 
@@ -569,8 +569,8 @@ export function DragControls() {
 
     function syncGapPositions(positions: GapPosition[], el: Element, rect: DOMRect) {
       const cs = getComputedStyle(el);
-      const gapValue = (cs.gap || cs.rowGap || '0px') === '0px' ? '0' : (cs.gap || cs.rowGap);
-      const gapNum = parseFloat(gapValue) || 0;
+      const gapNum = Math.round(parseFloat(cs.gap || cs.rowGap || '0') || 0);
+      const gapValue = gapNum === 0 ? '0' : gapNum + 'px';
 
       for (let i = 0; i < positions.length; i++) {
         const pos = positions[i];

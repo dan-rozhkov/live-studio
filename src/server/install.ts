@@ -3,7 +3,14 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, resolve } from "path";
 import { SKILL_CONTENT } from "./skill.js";
 
-const MCP_ENTRY = { command: "npx", args: ["-y", "live-studio"] };
+/** Prefer local binary over npx for faster startup. */
+function getMcpEntry(root: string): { command: string; args: string[] } {
+  const localBin = join(root, "node_modules", ".bin", "live-studio");
+  if (existsSync(localBin)) {
+    return { command: "node", args: [localBin] };
+  }
+  return { command: "npx", args: ["-y", "live-studio"] };
+}
 
 // ANSI helpers
 const ESC = "\x1B[";
@@ -25,7 +32,7 @@ function findProjectRoot(): string {
 }
 
 /** Write or merge .mcp.json — preserves existing servers */
-function writeMcpConfig(configFile: string): void {
+function writeMcpConfig(configFile: string, root: string): void {
   let config: Record<string, any> = {};
   try {
     config = JSON.parse(readFileSync(configFile, "utf-8"));
@@ -33,7 +40,7 @@ function writeMcpConfig(configFile: string): void {
     // file doesn't exist or is invalid — start fresh
   }
   if (!config.mcpServers) config.mcpServers = {};
-  config.mcpServers["live-studio"] = MCP_ENTRY;
+  config.mcpServers["live-studio"] = getMcpEntry(root);
   mkdirSync(join(configFile, ".."), { recursive: true });
   writeFileSync(configFile, JSON.stringify(config, null, 2) + "\n");
 }
@@ -60,7 +67,7 @@ export async function install(): Promise<void> {
   console.log("");
 
   // Write .mcp.json (merging with existing config)
-  writeMcpConfig(join(root, ".mcp.json"));
+  writeMcpConfig(join(root, ".mcp.json"), root);
   console.log(`  ${green("\u2713")} MCP server`);
   console.log(`    ${dim(".mcp.json")}`);
   console.log("");

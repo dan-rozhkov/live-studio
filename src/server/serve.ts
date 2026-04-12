@@ -41,6 +41,7 @@ const args = {
     .describe("Options for the user to choose from (ask only)"),
   text: z
     .string()
+    .min(1)
     .optional()
     .describe("Message text to send to the user (message action)"),
   active: z
@@ -115,7 +116,12 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
         return textResult("Panic cleared.");
       }
       if (action === "message") {
-        bridge.sendAgentMessage(text ?? "");
+        if (!text) {
+          return errorResult(
+            "The 'message' action requires a non-empty 'text' field."
+          );
+        }
+        bridge.sendAgentMessage(text);
         return textResult("Message sent.");
       }
       if (action === "responding") {
@@ -192,11 +198,11 @@ async function handleGetAction(
 const instructions =
   "Live Studio bridges a visual editor panel to this agent. Use the /studio skill to start a session.";
 
-export async function startServer(): Promise<void> {
+export async function startServer(port?: number): Promise<void> {
   const server = new McpServer(
     {
       name: "live-studio",
-      version: "0.1.0",
+      version: __VERSION__,
     },
     {
       capabilities: {
@@ -207,7 +213,7 @@ export async function startServer(): Promise<void> {
     }
   );
 
-  const bridge = new DevToolsBridge();
+  const bridge = new DevToolsBridge(port);
 
   initTool(server, bridge);
 
@@ -221,4 +227,11 @@ export async function startServer(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  const shutdown = () => {
+    bridge.stop();
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
