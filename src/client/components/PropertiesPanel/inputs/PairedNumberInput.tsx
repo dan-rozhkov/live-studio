@@ -14,19 +14,21 @@ export interface PairedNumberInputProps {
   endContent?: preact.ComponentChildren;
 }
 
-function extractDisplay(v: string): { display: string; unit: string } {
+export function extractDisplay(v: string): { display: string; unit: string } {
   const { num, unit } = parseNumericValue(v);
   if (unit === 'px') return { display: String(Math.round(num)), unit };
   if (unit) return { display: String(num), unit };
   return { display: v, unit: '' };
 }
 
-function PairedField({
+export function PairedField({
   prefix,
+  startContent,
   value,
   onChange,
 }: {
-  prefix: string;
+  prefix?: string;
+  startContent?: preact.ComponentChildren;
   value: string;
   onChange: (v: string) => void;
 }) {
@@ -74,7 +76,10 @@ function PairedField({
 
   return (
     <div class={styles.pairedInput}>
-      <span class={styles.pairedInputPrefix}>{prefix}</span>
+      {startContent
+        ? <span class={styles.paddingInputIcon}>{startContent}</span>
+        : prefix && <span class={styles.pairedInputPrefix}>{prefix}</span>
+      }
       <input
         type="text"
         class={styles.pairedInputField}

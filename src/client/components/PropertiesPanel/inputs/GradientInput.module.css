@@ -68,7 +68,7 @@
 
 .stopColorRow {
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   display: flex;
 }
 
@@ -166,7 +166,7 @@
 
 .typeRow {
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   display: flex;
 }
 
@@ -223,7 +223,7 @@
 
 .controlRow {
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   display: flex;
 }
 
@@ -259,7 +259,7 @@
 
 .gradientGroup {
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   display: flex;
 }

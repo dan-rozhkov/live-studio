@@ -37,14 +37,14 @@
 
 .select {
   appearance: none;
-  background-color: var(--cs-input-bg);
+  background-color: var(--cs-layer);
   background-image: var(--cs-select-chevron);
   border: 1px solid var(--cs-input-border);
   flex: 1;
   min-width: 0;
   height: 24px;
   color: var(--cs-foreground);
-  font-family: var(--cs-font-mono);
+  font-family: var(--cs-font);
   cursor: pointer;
   background-position: right 6px center;
   background-repeat: no-repeat;
@@ -64,7 +64,7 @@
   flex: 1;
   min-width: 0;
   color: var(--cs-foreground);
-  font-family: var(--cs-font-mono);
+  font-family: var(--cs-font);
   border-radius: 4px;
   outline: none;
   padding: 2px 4px;
@@ -91,7 +91,7 @@
   background: var(--cs-input-bg);
   width: 100%;
   color: var(--cs-foreground);
-  font-family: var(--cs-font-mono);
+  font-family: var(--cs-font);
   border: 1px solid transparent;
   border-radius: 4px;
   outline: none;
@@ -205,7 +205,7 @@
 .sliderGroup {
   flex: 1;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   display: flex;
   container-type: inline-size;
@@ -267,7 +267,7 @@
 
 .pairedRow {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   align-items: center;
   min-height: 28px;
 }
@@ -304,7 +304,7 @@
   background: none;
   border: none;
   color: var(--cs-foreground);
-  font-family: var(--cs-font-mono);
+  font-family: var(--cs-font);
   font-size: 12px;
   padding: 2px 4px;
   width: 100%;
@@ -364,7 +364,6 @@
   border-radius: 3px;
   cursor: pointer;
   padding: 0;
-  transition: color 0.1s, background 0.1s;
 }
 
 .iconToggleBtn:hover {
@@ -407,7 +406,7 @@
 .compactColorRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 28px;
 }
 
@@ -417,7 +416,7 @@
   min-width: 0;
   flex: 1;
   color: var(--cs-foreground);
-  font-family: var(--cs-font-mono);
+  font-family: var(--cs-font);
   border-radius: 4px;
   outline: none;
   padding: 2px 6px;
@@ -440,7 +439,7 @@
   width: 52px;
   flex-shrink: 0;
   color: var(--cs-foreground);
-  font-family: var(--cs-font-mono);
+  font-family: var(--cs-font);
   border-radius: 4px;
   outline: none;
   padding: 2px 6px;
@@ -519,4 +518,92 @@
 .checkboxLabel {
   font-size: 12px;
   color: var(--cs-foreground);
+}
+
+/* ── Alignment + Gap row ── */
+
+.alignGapRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.alignGapCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.alignGapCol:first-child {
+  flex-shrink: 0;
+}
+
+.alignGapCol:last-child {
+  flex: 1;
+}
+
+/* ── 3×3 Alignment grid ── */
+
+.alignmentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--cs-input-bg);
+  border-radius: 6px;
+  padding: 4px;
+  width: 80px;
+  height: 80px;
+  box-sizing: border-box;
+}
+
+.alignmentCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  color: var(--cs-feint-text);
+  transition: color 0.1s, background 0.1s;
+}
+
+.alignmentCell:hover {
+  color: var(--cs-foreground);
+  background: color-mix(in srgb, var(--cs-foreground) 8%, transparent);
+}
+
+.alignmentCellActive {
+  color: var(--cs-accent);
+}
+
+.alignmentCellActive:hover {
+  color: var(--cs-accent);
+}
+
+.alignmentDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ── Compact padding row ── */
+
+.paddingCompactRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 28px;
+}
+
+.paddingInputIcon {
+  color: var(--cs-feint-text);
+  padding: 0 2px 0 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }

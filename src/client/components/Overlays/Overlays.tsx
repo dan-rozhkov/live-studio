@@ -483,8 +483,9 @@ export function Overlays() {
     for (const id of secondaryIds) {
       if (!multiSelectEls.current.has(id)) {
         const div = document.createElement('div');
+        div.dataset.lsSelectedClickGuard = '1';
         div.style.cssText =
-          `position:fixed;pointer-events:none;z-index:2147483638;` +
+          `position:fixed;pointer-events:auto;z-index:2147483638;` +
           `border:1px dashed ${FIGMA_BLUE};background:${FIGMA_BLUE_LIGHT};box-sizing:border-box;`;
         document.documentElement.appendChild(div);
         multiSelectEls.current.set(id, div);

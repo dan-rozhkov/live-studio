@@ -31,11 +31,11 @@ export function SelectInput({
     [onChange],
   );
 
-  const labelText = displayName || label;
+  const labelText = displayName !== undefined ? displayName : (label || '');
 
   return (
     <div class={`${styles.row} ${indent ? styles.indent : ''}`}>
-      <label class={styles.label} title={labelText}>{labelText}</label>
+      {labelText && <label class={styles.label} title={labelText}>{labelText}</label>}
       <select
         class={styles.select}
         value={value}

@@ -1,8 +1,9 @@
 // ---------------------------------------------------------------------------
-// DragControls — visual drag handles for padding, gap, border-radius
+// DragControls — visual drag handles for margin, padding, gap, border-radius
 // ---------------------------------------------------------------------------
 // Renders imperatively on document.documentElement (same as Overlays)
 // to show draggable handles on the selected element:
+//   - Margin: outer edge handles for margin-top/right/bottom/left
 //   - Padding: inner edge handles for padding-top/right/bottom/left
 //   - Gap: between flex children, drag to adjust gap
 //   - Border-radius: corner circle, drag to adjust border-radius
@@ -15,6 +16,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { useStore } from '../../state/store';
 import { getElementById } from '../../bridge/dom-bridge';
+import { refreshIfSelected } from '../../utils/select-node';
 import type { DomNode } from '../../state/slices/dom-slice';
 
 // ---------------------------------------------------------------------------
@@ -23,7 +25,11 @@ import type { DomNode } from '../../state/slices/dom-slice';
 
 const PADDING_COLOR = '#FF69B4';  // Figma pink
 const GAP_COLOR = '#9747FF';      // Figma purple
-const RADIUS_COLOR = '#F59E0B';   // Figma orange
+const RADIUS_COLOR = '#0D99FF';   // Selection blue
+const MARGIN_COLOR = '#0D99FF';   // Selection blue
+
+const RADIUS_CORNERS = ['top-left', 'top-right', 'bottom-right', 'bottom-left'] as const;
+type RadiusCorner = typeof RADIUS_CORNERS[number];
 
 const OPPOSITE_SIDE: Record<string, string> = {
   top: 'bottom',
@@ -101,6 +107,12 @@ interface Indicator {
   label: HTMLDivElement;
   side?: string;
   isVertical?: boolean;
+}
+
+interface DragTarget {
+  el: Element;
+  selector: string;
+  initialValues: Record<string, string>;
 }
 
 function createIndicator(name: string, color: string): Indicator {
@@ -187,10 +199,10 @@ function endDrag(
 }
 
 // ---------------------------------------------------------------------------
-// Padding positions
+// Box spacing positions
 // ---------------------------------------------------------------------------
 
-interface PaddingPosition {
+interface BoxSpacingPosition {
   top: number;
   left: number;
   width: number;
@@ -199,7 +211,26 @@ interface PaddingPosition {
   value: string;
 }
 
-function computePaddingPositions(el: Element, rect: DOMRect): PaddingPosition[] {
+function computeMarginPositions(el: Element, rect: DOMRect): BoxSpacingPosition[] {
+  const cs = getComputedStyle(el);
+  const mt = parseFloat(cs.marginTop) || 0;
+  const mr = parseFloat(cs.marginRight) || 0;
+  const mb = parseFloat(cs.marginBottom) || 0;
+  const ml = parseFloat(cs.marginLeft) || 0;
+  const w = rect.width;
+  const h = rect.height;
+  const positions: BoxSpacingPosition[] = [];
+  const horizontalMarginWidth = Math.max(w + ml + mr, 2);
+
+  if (mt > 0) positions.push({ top: -mt, left: -ml, width: horizontalMarginWidth, height: mt, side: 'top', value: Math.round(mt) + 'px' });
+  if (mb > 0) positions.push({ top: h, left: -ml, width: horizontalMarginWidth, height: mb, side: 'bottom', value: Math.round(mb) + 'px' });
+  if (ml > 0) positions.push({ top: 0, left: -ml, width: ml, height: h, side: 'left', value: Math.round(ml) + 'px' });
+  if (mr > 0) positions.push({ top: 0, left: w, width: mr, height: h, side: 'right', value: Math.round(mr) + 'px' });
+
+  return positions;
+}
+
+function computePaddingPositions(el: Element, rect: DOMRect): BoxSpacingPosition[] {
   const cs = getComputedStyle(el);
   const pt = parseFloat(cs.paddingTop) || 0;
   const pr = parseFloat(cs.paddingRight) || 0;
@@ -320,17 +351,19 @@ export function DragControls() {
   const domTree = useStore((s) => s.domTree);
 
   // Refs for imperative DOM management
+  const marginIndicators = useRef<Indicator[]>([]);
   const paddingIndicators = useRef<Indicator[]>([]);
   const gapIndicators = useRef<Indicator[]>([]);
   const radiusHandle = useRef<{
     container: HTMLDivElement;
-    handle: HTMLDivElement;
-    inner: HTMLDivElement;
+    handles: HTMLDivElement[];
     label: HTMLDivElement;
   } | null>(null);
   const rafRef = useRef<number>(0);
+  const prevMarginKey = useRef('');
   const prevPaddingKey = useRef('');
   const prevGapKey = useRef('');
+  const dragTargetRef = useRef<DragTarget | null>(null);
 
   useEffect(() => {
     // Cancel previous loop
@@ -338,6 +371,9 @@ export function DragControls() {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = 0;
     }
+
+    resetVisualState();
+    dragTargetRef.current = null;
 
     // Hide all if no selection or in picker mode
     if (selectedNodeId === null || isPickingElement) {
@@ -357,6 +393,10 @@ export function DragControls() {
 
     // Track initial computed values for change detection
     const initialValues: Record<string, string> = {};
+    dragTargetRef.current = { el, selector, initialValues };
+
+    // ---- Margin setup ----
+    setupMarginIndicators(el);
 
     // ---- Padding setup ----
     setupPaddingIndicators(el);
@@ -375,6 +415,9 @@ export function DragControls() {
       }
 
       const rect = el!.getBoundingClientRect();
+
+      // Update margin indicators
+      updateMarginPositions(el!, rect);
 
       // Update padding indicators
       updatePaddingPositions(el!, rect);
@@ -398,7 +441,7 @@ export function DragControls() {
     };
 
     // ================================================================
-    // Setup functions (closures over el, selector, initialValues)
+    // Setup functions
     // ================================================================
 
     function setupPaddingIndicators(el: Element) {
@@ -411,11 +454,27 @@ export function DragControls() {
       // Ensure we have 4 indicators
       while (paddingIndicators.current.length < 4) {
         const ind = createIndicator('padding', PADDING_COLOR);
-        setupPaddingDrag(ind, el, selector, initialValues);
+        setupPaddingDrag(ind);
         paddingIndicators.current.push(ind);
       }
 
       syncPaddingPositions(positions, rect);
+    }
+
+    function setupMarginIndicators(el: Element) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 50 || rect.height < 50) return;
+
+      const positions = computeMarginPositions(el, rect);
+      prevMarginKey.current = serializeRects(positions);
+
+      while (marginIndicators.current.length < positions.length) {
+        const ind = createIndicator('margin', MARGIN_COLOR);
+        setupMarginDrag(ind);
+        marginIndicators.current.push(ind);
+      }
+
+      syncMarginPositions(positions, rect);
     }
 
     function setupGapIndicators(el: Element) {
@@ -431,7 +490,7 @@ export function DragControls() {
       // Sync indicator count
       while (gapIndicators.current.length < positions.length) {
         const ind = createIndicator('gap', GAP_COLOR);
-        setupGapDrag(ind, el, selector, initialValues);
+        setupGapDrag(ind);
         gapIndicators.current.push(ind);
       }
 
@@ -440,19 +499,10 @@ export function DragControls() {
 
     function setupRadiusHandle(el: Element) {
       const rect = el.getBoundingClientRect();
-      if (rect.width < 50 || rect.height < 50) return;
-
-      const cs = getComputedStyle(el);
-      const bg = cs.backgroundColor;
-      if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return;
-
-      // Only show for uniform border-radius
-      const tl = cs.borderTopLeftRadius;
-      if (
-        tl !== cs.borderTopRightRadius ||
-        tl !== cs.borderBottomRightRadius ||
-        tl !== cs.borderBottomLeftRadius
-      ) return;
+      if (!canShowRadiusHandle(el, rect)) {
+        if (radiusHandle.current) radiusHandle.current.container.style.display = 'none';
+        return;
+      }
 
       if (!radiusHandle.current) {
         const container = document.createElement('div');
@@ -460,45 +510,121 @@ export function DragControls() {
         container.style.cssText =
           'position:fixed;pointer-events:none;z-index:2147483641;display:none;overflow:visible;';
 
-        const handle = document.createElement('div');
-        handle.setAttribute('data-ls-visual-control', 'radius-handle');
-        handle.style.cssText = `position:absolute;width:12px;height:12px;border-radius:50%;background:${hexToRgba(RADIUS_COLOR, 0.25)};pointer-events:auto;cursor:nwse-resize;transform:translate(-50%,-50%);transition:transform 0.15s,filter 0.15s;`;
-
-        const inner = document.createElement('div');
-        inner.style.cssText = `position:absolute;top:50%;left:50%;width:4px;height:4px;border-radius:50%;background:${RADIUS_COLOR};transform:translate(-50%,-50%);`;
-        handle.appendChild(inner);
-
         const label = document.createElement('div');
         label.setAttribute('data-ls-visual-control', 'radius-tooltip');
         label.style.cssText = `position:absolute;left:12px;top:-6px;padding:2px 6px;border-radius:4px;font-size:10px;font-family:monospace;white-space:nowrap;background:${RADIUS_COLOR};color:#fff;border:none;z-index:1;pointer-events:none;opacity:0;transition:opacity 0.15s;`;
 
-        container.appendChild(handle);
         container.appendChild(label);
 
-        // Hover
-        handle.addEventListener('mouseenter', () => {
-          label.style.opacity = '1';
-          handle.style.transform = 'translate(-50%,-50%) scale(1.3)';
-          handle.style.filter = 'brightness(1.5)';
-        });
-        handle.addEventListener('mouseleave', () => {
-          if ((handle as any).dataset.dragging) return;
-          label.style.opacity = '0';
-          handle.style.transform = 'translate(-50%,-50%)';
-          handle.style.filter = '';
+        const handles = RADIUS_CORNERS.map((corner) => {
+          const handle = document.createElement('div');
+          handle.setAttribute('data-ls-visual-control', 'radius-handle');
+          handle.dataset.corner = corner;
+          handle.style.cssText = `position:absolute;width:12px;height:12px;border-radius:50%;background:${hexToRgba(RADIUS_COLOR, 0.25)};pointer-events:auto;cursor:${getRadiusCursor(corner)};transform:translate(-50%,-50%);transition:transform 0.15s,filter 0.15s;`;
+
+          const inner = document.createElement('div');
+          inner.style.cssText = `position:absolute;top:50%;left:50%;width:4px;height:4px;border-radius:50%;background:${RADIUS_COLOR};transform:translate(-50%,-50%);`;
+          handle.appendChild(inner);
+
+          handle.addEventListener('mouseenter', () => {
+            label.style.opacity = '1';
+            positionRadiusLabel(label, handle);
+          });
+          handle.addEventListener('mouseleave', () => {
+            if ((handle as any).dataset.dragging) return;
+            label.style.opacity = '0';
+          });
+
+          container.appendChild(handle);
+          return handle;
         });
 
         document.documentElement.appendChild(container);
-        radiusHandle.current = { container, handle, inner, label };
+        radiusHandle.current = { container, handles, label };
+        setupRadiusDrag();
       }
 
-      setupRadiusDrag(el, selector, initialValues);
       updateRadiusPosition(el, rect);
     }
 
     // ---- Position sync ----
 
-    function syncPaddingPositions(positions: PaddingPosition[], rect: DOMRect) {
+    function syncBoxSpacingPosition(
+      ind: Indicator,
+      pos: BoxSpacingPosition,
+      rect: DOMRect,
+      color: string,
+      borderSideBySpacingSide: Record<string, keyof CSSStyleDeclaration>,
+    ) {
+      ind.side = pos.side;
+      const s = ind.container.style;
+      s.display = 'block';
+      s.top = (rect.top + pos.top) + 'px';
+      s.left = (rect.left + pos.left) + 'px';
+      s.width = pos.width + 'px';
+      s.height = pos.height + 'px';
+
+      const ls = ind.line.style;
+      ls.borderTop = 'none';
+      ls.borderRight = 'none';
+      ls.borderBottom = 'none';
+      ls.borderLeft = 'none';
+      const border = `1px dashed ${hexToRgba(color, 0.4)}`;
+      ls[borderSideBySpacingSide[pos.side] as any] = border;
+
+      const isH = pos.side === 'top' || pos.side === 'bottom';
+      setDotGrip(ind.grip.style, color, !isH, isH ? pos.height : pos.width);
+      ind.hitArea.style.cursor = isH ? 'ns-resize' : 'ew-resize';
+      (ind.hitArea as any).dataset.side = pos.side;
+
+      ind.label.textContent = pos.value;
+      if (pos.side === 'top') {
+        ind.label.style.left = '50%';
+        ind.label.style.bottom = '';
+        ind.label.style.top = '-6px';
+        ind.label.style.right = '';
+        ind.label.style.transform = 'translate(-50%,-100%)';
+      } else if (pos.side === 'bottom') {
+        ind.label.style.left = '50%';
+        ind.label.style.top = '';
+        ind.label.style.bottom = '-6px';
+        ind.label.style.right = '';
+        ind.label.style.transform = 'translate(-50%,100%)';
+      } else if (pos.side === 'left') {
+        ind.label.style.top = '50%';
+        ind.label.style.right = '';
+        ind.label.style.left = '-6px';
+        ind.label.style.bottom = '';
+        ind.label.style.transform = 'translate(-100%,-50%)';
+      } else {
+        ind.label.style.top = '50%';
+        ind.label.style.left = '';
+        ind.label.style.right = '-6px';
+        ind.label.style.bottom = '';
+        ind.label.style.transform = 'translate(100%,-50%)';
+      }
+    }
+
+    function syncMarginPositions(positions: BoxSpacingPosition[], rect: DOMRect) {
+      for (let i = 0; i < positions.length; i++) {
+        const pos = positions[i];
+        const ind = marginIndicators.current[i];
+        if (!ind) continue;
+
+        syncBoxSpacingPosition(ind, pos, rect, MARGIN_COLOR, {
+          top: 'borderTop',
+          bottom: 'borderBottom',
+          left: 'borderLeft',
+          right: 'borderRight',
+        });
+      }
+
+      for (let i = positions.length; i < marginIndicators.current.length; i++) {
+        marginIndicators.current[i].container.style.display = 'none';
+      }
+    }
+
+    function syncPaddingPositions(positions: BoxSpacingPosition[], rect: DOMRect) {
       for (let i = 0; i < positions.length; i++) {
         const pos = positions[i];
         const ind = paddingIndicators.current[i];
@@ -511,31 +637,13 @@ export function DragControls() {
           continue;
         }
 
-        ind.side = pos.side;
-        const s = ind.container.style;
-        s.display = 'block';
-        s.top = (rect.top + pos.top) + 'px';
-        s.left = (rect.left + pos.left) + 'px';
-        s.width = pos.width + 'px';
-        s.height = pos.height + 'px';
+        syncBoxSpacingPosition(ind, pos, rect, PADDING_COLOR, {
+          top: 'borderBottom',
+          bottom: 'borderTop',
+          left: 'borderRight',
+          right: 'borderLeft',
+        });
 
-        const ls = ind.line.style;
-        ls.borderTop = 'none';
-        ls.borderRight = 'none';
-        ls.borderBottom = 'none';
-        ls.borderLeft = 'none';
-        const border = `1px dashed ${hexToRgba(PADDING_COLOR, 0.4)}`;
-        if (pos.side === 'top') ls.borderBottom = border;
-        else if (pos.side === 'bottom') ls.borderTop = border;
-        else if (pos.side === 'left') ls.borderRight = border;
-        else ls.borderLeft = border;
-
-        const isH = pos.side === 'top' || pos.side === 'bottom';
-        setDotGrip(ind.grip.style, PADDING_COLOR, !isH, isH ? pos.height : pos.width);
-        ind.hitArea.style.cursor = isH ? 'ns-resize' : 'ew-resize';
-        (ind.hitArea as any).dataset.side = pos.side;
-
-        ind.label.textContent = pos.value;
         if (pos.side === 'top') {
           ind.label.style.left = '50%';
           ind.label.style.bottom = '-6px';
@@ -624,6 +732,32 @@ export function DragControls() {
 
     // ---- Update functions (called in rAF tick) ----
 
+    function updateMarginPositions(el: Element, rect: DOMRect) {
+      if (rect.width < 50 || rect.height < 50) {
+        for (const ind of marginIndicators.current) ind.container.style.display = 'none';
+        return;
+      }
+      const positions = computeMarginPositions(el, rect);
+      const key = serializeRects(positions);
+      if (key !== prevMarginKey.current) {
+        prevMarginKey.current = key;
+        while (marginIndicators.current.length < positions.length) {
+          const ind = createIndicator('margin', MARGIN_COLOR);
+          setupMarginDrag(ind);
+          marginIndicators.current.push(ind);
+        }
+        syncMarginPositions(positions, rect);
+      } else {
+        for (let i = 0; i < positions.length; i++) {
+          const pos = positions[i];
+          const ind = marginIndicators.current[i];
+          if (!ind) continue;
+          ind.container.style.top = (rect.top + pos.top) + 'px';
+          ind.container.style.left = (rect.left + pos.left) + 'px';
+        }
+      }
+    }
+
     function updatePaddingPositions(el: Element, rect: DOMRect) {
       if (rect.width < 50 || rect.height < 50) {
         for (const ind of paddingIndicators.current) ind.container.style.display = 'none';
@@ -660,7 +794,7 @@ export function DragControls() {
         // May need more indicators
         while (gapIndicators.current.length < positions.length) {
           const ind = createIndicator('gap', GAP_COLOR);
-          setupGapDrag(ind, el, selector, initialValues);
+          setupGapDrag(ind);
           gapIndicators.current.push(ind);
         }
         syncGapPositions(positions, el, rect);
@@ -677,58 +811,118 @@ export function DragControls() {
 
     function updateRadiusPosition(el: Element, rect: DOMRect) {
       if (!radiusHandle.current) return;
-      if (rect.width < 50 || rect.height < 50) {
+      if (!canShowRadiusHandle(el, rect)) {
         radiusHandle.current.container.style.display = 'none';
         return;
       }
       const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
-      const offset = Math.max(radius, 8);
+      const offset = Math.min(Math.max(radius, 5), Math.min(rect.width, rect.height) / 2);
 
       radiusHandle.current.container.style.display = 'block';
-      radiusHandle.current.container.style.top = (rect.top + offset) + 'px';
-      radiusHandle.current.container.style.left = (rect.left + offset) + 'px';
-      radiusHandle.current.container.style.width = '1px';
-      radiusHandle.current.container.style.height = '1px';
+      radiusHandle.current.container.style.top = rect.top + 'px';
+      radiusHandle.current.container.style.left = rect.left + 'px';
+      radiusHandle.current.container.style.width = rect.width + 'px';
+      radiusHandle.current.container.style.height = rect.height + 'px';
+
+      const left = offset + 'px';
+      const right = (rect.width - offset) + 'px';
+      const top = offset + 'px';
+      const bottom = (rect.height - offset) + 'px';
+      for (const handle of radiusHandle.current.handles) {
+        const corner = handle.dataset.corner as RadiusCorner | undefined;
+        handle.style.left = (corner === 'top-right' || corner === 'bottom-right') ? right : left;
+        handle.style.top = (corner === 'bottom-right' || corner === 'bottom-left') ? bottom : top;
+      }
 
       radiusHandle.current.label.textContent = radius === 0 ? '0' : Math.round(radius) + 'px';
     }
 
-    // ---- Drag setup for padding ----
-    function setupPaddingDrag(
+    function canShowRadiusHandle(el: Element, rect: DOMRect): boolean {
+      if (rect.width < 50 || rect.height < 50) return false;
+
+      const cs = getComputedStyle(el);
+      const bg = cs.backgroundColor;
+      if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return false;
+
+      const tl = cs.borderTopLeftRadius;
+      return (
+        tl === cs.borderTopRightRadius &&
+        tl === cs.borderBottomRightRadius &&
+        tl === cs.borderBottomLeftRadius
+      );
+    }
+
+    function getRadiusCursor(corner: RadiusCorner): string {
+      return corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize';
+    }
+
+    function getRadiusLocalPoint(corner: RadiusCorner, e: PointerEvent, rect: DOMRect): { x: number; y: number } {
+      if (corner === 'top-right') {
+        return { x: rect.right - e.clientX, y: e.clientY - rect.top };
+      }
+      if (corner === 'bottom-right') {
+        return { x: rect.right - e.clientX, y: rect.bottom - e.clientY };
+      }
+      if (corner === 'bottom-left') {
+        return { x: e.clientX - rect.left, y: rect.bottom - e.clientY };
+      }
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function positionRadiusLabel(label: HTMLDivElement, handle: HTMLDivElement): void {
+      label.style.left = handle.style.left;
+      label.style.top = handle.style.top;
+      label.style.right = '';
+      label.style.bottom = '';
+
+      const corner = handle.dataset.corner as RadiusCorner | undefined;
+      label.style.transform =
+        corner === 'bottom-right' || corner === 'bottom-left'
+          ? 'translate(-50%,12px)'
+          : 'translate(-50%,calc(-100% - 12px))';
+    }
+
+    function setupBoxSpacingDrag(
       ind: Indicator,
-      el: Element,
-      selector: string,
-      _initValues: Record<string, string>,
+      propertyBase: 'margin' | 'padding',
+      indicators: { current: Indicator[] },
+      dragSigns: Record<string, number>,
+      minValue: number,
     ) {
       let startX = 0;
       let startY = 0;
       let startVal = 0;
       let side = 'top';
+      let activeTarget: DragTarget | null = null;
 
       function onDown(e: PointerEvent) {
         e.stopPropagation();
         e.preventDefault();
+        activeTarget = dragTargetRef.current;
+        if (!activeTarget?.el.isConnected) return;
+
         side = (ind.hitArea as any).dataset.side || 'top';
         const isV = side === 'top' || side === 'bottom';
         startX = e.clientX;
         startY = e.clientY;
+        const { el, initialValues } = activeTarget;
         const cs = getComputedStyle(el);
-        startVal = parseFloat(cs.getPropertyValue(`padding-${side}`)) || 0;
+        startVal = parseFloat(cs.getPropertyValue(`${propertyBase}-${side}`)) || 0;
 
         // Record initial for change tracking
-        const prop = `padding-${side}`;
-        if (!(prop in _initValues)) {
-          _initValues[prop] = cs.getPropertyValue(prop);
+        const prop = `${propertyBase}-${side}`;
+        if (!(prop in initialValues)) {
+          initialValues[prop] = cs.getPropertyValue(prop);
         }
-        const oppProp = `padding-${OPPOSITE_SIDE[side]}`;
-        if (!(oppProp in _initValues)) {
-          _initValues[oppProp] = cs.getPropertyValue(oppProp);
+        const oppProp = `${propertyBase}-${OPPOSITE_SIDE[side]}`;
+        if (!(oppProp in initialValues)) {
+          initialValues[oppProp] = cs.getPropertyValue(oppProp);
         }
 
         startDrag(ind.hitArea, ind.line, ind.label, ind.grip, e, isV ? 'ns-resize' : 'ew-resize');
 
-        // Highlight all padding indicators
-        for (const sibling of paddingIndicators.current) {
+        // Highlight all indicators for the same spacing type.
+        for (const sibling of indicators.current) {
           if (sibling === ind) continue;
           sibling.line.style.opacity = '1';
           sibling.grip.style.transform = 'scale(1.3)';
@@ -741,16 +935,19 @@ export function DragControls() {
       }
 
       function onMove(e: PointerEvent) {
+        if (!activeTarget?.el.isConnected) return;
+
         const isV = side === 'top' || side === 'bottom';
-        const sign = side === 'bottom' || side === 'right' ? -1 : 1;
+        const sign = dragSigns[side] ?? 1;
         const delta = isV ? (e.clientY - startY) : (e.clientX - startX);
-        const val = Math.max(0, Math.round(startVal + delta * sign)) + 'px';
-        const prop = `padding-${side}`;
+        const val = Math.max(minValue, Math.round(startVal + delta * sign)) + 'px';
+        const prop = `${propertyBase}-${side}`;
+        const { el } = activeTarget;
         (el as HTMLElement).style.setProperty(prop, val);
 
         // Sync opposite side unless Shift is held
         if (!e.shiftKey) {
-          const opp = `padding-${OPPOSITE_SIDE[side]}`;
+          const opp = `${propertyBase}-${OPPOSITE_SIDE[side]}`;
           (el as HTMLElement).style.setProperty(opp, val);
         }
 
@@ -761,19 +958,20 @@ export function DragControls() {
         endDrag(ind.hitArea, ind.line, ind.label, ind.grip, e, onMove as any, onUp as any);
 
         // Reset sibling highlights
-        for (const sibling of paddingIndicators.current) {
+        for (const sibling of indicators.current) {
           if (sibling === ind) continue;
           sibling.line.style.opacity = '0';
           sibling.grip.style.transform = '';
           sibling.grip.style.filter = '';
         }
 
-        // Queue edits for changed padding values
-        if (selector) {
+        // Queue edits for changed spacing values.
+        if (activeTarget?.selector && activeTarget.el.isConnected) {
+          const { el, selector, initialValues } = activeTarget;
           const cs = getComputedStyle(el);
-          const prop = `padding-${side}`;
+          const prop = `${propertyBase}-${side}`;
           const newVal = cs.getPropertyValue(prop);
-          const oldVal = _initValues[prop] || '0px';
+          const oldVal = initialValues[prop] || '0px';
           if (newVal !== oldVal) {
             useStore.getState().queueEdit({
               type: 'style',
@@ -781,12 +979,12 @@ export function DragControls() {
               name: prop,
               value: `${oldVal} \u2192 ${newVal}`,
             });
-            _initValues[prop] = newVal;
+            initialValues[prop] = newVal;
           }
 
-          const oppProp = `padding-${OPPOSITE_SIDE[side]}`;
+          const oppProp = `${propertyBase}-${OPPOSITE_SIDE[side]}`;
           const newOppVal = cs.getPropertyValue(oppProp);
-          const oldOppVal = _initValues[oppProp] || '0px';
+          const oldOppVal = initialValues[oppProp] || '0px';
           if (newOppVal !== oldOppVal) {
             useStore.getState().queueEdit({
               type: 'style',
@@ -794,36 +992,58 @@ export function DragControls() {
               name: oppProp,
               value: `${oldOppVal} \u2192 ${newOppVal}`,
             });
-            _initValues[oppProp] = newOppVal;
+            initialValues[oppProp] = newOppVal;
           }
+          refreshIfSelected(useStore.getState().selectedNodeId);
         }
+        activeTarget = null;
       }
 
       ind.hitArea.addEventListener('pointerdown', onDown as EventListener);
     }
 
+    // ---- Drag setup for margin ----
+    function setupMarginDrag(ind: Indicator) {
+      setupBoxSpacingDrag(ind, 'margin', marginIndicators, {
+        top: -1,
+        bottom: 1,
+        left: -1,
+        right: 1,
+      }, 0);
+    }
+
+    // ---- Drag setup for padding ----
+    function setupPaddingDrag(ind: Indicator) {
+      setupBoxSpacingDrag(ind, 'padding', paddingIndicators, {
+        top: 1,
+        bottom: -1,
+        left: 1,
+        right: -1,
+      }, 0);
+    }
+
     // ---- Drag setup for gap ----
-    function setupGapDrag(
-      ind: Indicator,
-      el: Element,
-      selector: string,
-      _initValues: Record<string, string>,
-    ) {
+    function setupGapDrag(ind: Indicator) {
       let startX = 0;
       let startY = 0;
       let startGap = 0;
       let isVertical = false;
+      let activeTarget: DragTarget | null = null;
 
       function onDown(e: PointerEvent) {
         e.stopPropagation();
         e.preventDefault();
+        activeTarget = dragTargetRef.current;
+        if (!activeTarget?.el.isConnected) return;
+
         isVertical = (ind.hitArea as any).dataset.vertical === '1';
         startX = e.clientX;
         startY = e.clientY;
+        const { el, initialValues } = activeTarget;
         startGap = parseFloat(getComputedStyle(el).gap) || 0;
 
-        if (!('gap' in _initValues)) {
-          _initValues['gap'] = getComputedStyle(el).gap || '0px';
+        if (!('gap' in initialValues)) {
+          initialValues['gap'] = getComputedStyle(el).gap || '0px';
         }
 
         startDrag(ind.hitArea, ind.line, ind.label, ind.grip, e, isVertical ? 'col-resize' : 'row-resize');
@@ -842,9 +1062,11 @@ export function DragControls() {
       }
 
       function onMove(e: PointerEvent) {
+        if (!activeTarget?.el.isConnected) return;
+
         const delta = isVertical ? (e.clientX - startX) : (e.clientY - startY);
         const val = Math.max(0, Math.round(startGap + delta)) + 'px';
-        (el as HTMLElement).style.gap = val;
+        (activeTarget.el as HTMLElement).style.gap = val;
         ind.label.textContent = val;
 
         // Update all gap indicator labels
@@ -865,9 +1087,10 @@ export function DragControls() {
         }
 
         // Queue edit
-        if (selector) {
+        if (activeTarget?.selector && activeTarget.el.isConnected) {
+          const { el, selector, initialValues } = activeTarget;
           const newVal = (el as HTMLElement).style.gap || getComputedStyle(el).gap;
-          const oldVal = _initValues['gap'] || '0px';
+          const oldVal = initialValues['gap'] || '0px';
           if (newVal !== oldVal) {
             useStore.getState().queueEdit({
               type: 'style',
@@ -875,48 +1098,57 @@ export function DragControls() {
               name: 'gap',
               value: `${oldVal} \u2192 ${newVal}`,
             });
-            _initValues['gap'] = newVal;
+            initialValues['gap'] = newVal;
           }
+          refreshIfSelected(useStore.getState().selectedNodeId);
         }
+        activeTarget = null;
       }
 
       ind.hitArea.addEventListener('pointerdown', onDown as EventListener);
     }
 
     // ---- Drag setup for border-radius ----
-    function setupRadiusDrag(
-      el: Element,
-      selector: string,
-      _initValues: Record<string, string>,
-    ) {
+    function setupRadiusDrag() {
       const rh = radiusHandle.current;
       if (!rh) return;
-
-      if (!('border-radius' in _initValues)) {
-        _initValues['border-radius'] = getComputedStyle(el).borderRadius || '0px';
-      }
+      let activeTarget: DragTarget | null = null;
+      let activeHandle: HTMLDivElement | null = null;
+      let activeCorner: RadiusCorner = 'top-left';
 
       function onDown(e: PointerEvent) {
         e.stopPropagation();
         e.preventDefault();
+        activeTarget = dragTargetRef.current;
+        if (!activeTarget?.el.isConnected) return;
+        activeHandle = e.currentTarget as HTMLDivElement;
+        activeCorner = (activeHandle.dataset.corner as RadiusCorner | undefined) ?? 'top-left';
 
-        rh!.handle.setPointerCapture(e.pointerId);
-        (rh!.handle as any).dataset.dragging = '1';
+        const { el, initialValues } = activeTarget;
+        if (!('border-radius' in initialValues)) {
+          initialValues['border-radius'] = getComputedStyle(el).borderRadius || '0px';
+        }
+
+        activeHandle.setPointerCapture(e.pointerId);
+        (activeHandle as any).dataset.dragging = '1';
         rh!.label.style.opacity = '1';
-        rh!.handle.style.transform = 'translate(-50%,-50%) scale(1.3)';
-        rh!.handle.style.filter = 'brightness(1.8)';
-        document.documentElement.style.cursor = 'nwse-resize';
+        positionRadiusLabel(rh!.label, activeHandle);
+        document.documentElement.style.cursor = getRadiusCursor(activeCorner);
         document.documentElement.style.userSelect = 'none';
 
-        rh!.handle.addEventListener('pointermove', onMove as EventListener);
-        rh!.handle.addEventListener('pointerup', onUp as EventListener);
-        rh!.handle.addEventListener('lostpointercapture', onUp as EventListener);
+        activeHandle.addEventListener('pointermove', onMove as EventListener);
+        activeHandle.addEventListener('pointerup', onUp as EventListener);
+        activeHandle.addEventListener('lostpointercapture', onUp as EventListener);
       }
 
       function onMove(e: PointerEvent) {
+        if (!activeTarget?.el.isConnected) return;
+
+        const { el } = activeTarget;
         const rect = el.getBoundingClientRect();
-        const localX = e.clientX - rect.left;
-        const localY = e.clientY - rect.top;
+        const local = getRadiusLocalPoint(activeCorner, e, rect);
+        const localX = local.x;
+        const localY = local.y;
 
         if (localX < 0 || localX > rect.width || localY < 0 || localY > rect.height) return;
 
@@ -928,21 +1160,21 @@ export function DragControls() {
       }
 
       function onUp(e: PointerEvent) {
-        rh!.handle.releasePointerCapture(e.pointerId);
-        delete (rh!.handle as any).dataset.dragging;
+        if (!activeHandle) return;
+        activeHandle.releasePointerCapture(e.pointerId);
+        delete (activeHandle as any).dataset.dragging;
         document.documentElement.style.cursor = '';
         document.documentElement.style.userSelect = '';
-        rh!.handle.removeEventListener('pointermove', onMove as EventListener);
-        rh!.handle.removeEventListener('pointerup', onUp as EventListener);
-        rh!.handle.removeEventListener('lostpointercapture', onUp as EventListener);
+        activeHandle.removeEventListener('pointermove', onMove as EventListener);
+        activeHandle.removeEventListener('pointerup', onUp as EventListener);
+        activeHandle.removeEventListener('lostpointercapture', onUp as EventListener);
         rh!.label.style.opacity = '0';
-        rh!.handle.style.transform = 'translate(-50%,-50%)';
-        rh!.handle.style.filter = '';
 
         // Queue edit
-        if (selector) {
+        if (activeTarget?.selector && activeTarget.el.isConnected) {
+          const { el, selector, initialValues } = activeTarget;
           const newVal = (el as HTMLElement).style.borderRadius || getComputedStyle(el).borderRadius;
-          const oldVal = _initValues['border-radius'] || '0px';
+          const oldVal = initialValues['border-radius'] || '0px';
           if (newVal !== oldVal) {
             useStore.getState().queueEdit({
               type: 'style',
@@ -950,25 +1182,53 @@ export function DragControls() {
               name: 'border-radius',
               value: `${oldVal} \u2192 ${newVal}`,
             });
-            _initValues['border-radius'] = newVal;
+            initialValues['border-radius'] = newVal;
           }
+          refreshIfSelected(useStore.getState().selectedNodeId);
         }
+        activeTarget = null;
+        activeHandle = null;
       }
 
-      rh.handle.addEventListener('pointerdown', onDown as EventListener);
+      for (const handle of rh.handles) {
+        handle.addEventListener('pointerdown', onDown as EventListener);
+      }
     }
 
     // ---- Hide all indicators ----
     function hideAll() {
+      for (const ind of marginIndicators.current) ind.container.style.display = 'none';
       for (const ind of paddingIndicators.current) ind.container.style.display = 'none';
       for (const ind of gapIndicators.current) ind.container.style.display = 'none';
       if (radiusHandle.current) radiusHandle.current.container.style.display = 'none';
+    }
+
+    function resetVisualState() {
+      for (const ind of [...marginIndicators.current, ...paddingIndicators.current, ...gapIndicators.current]) {
+        delete (ind.hitArea as any).dataset.dragging;
+        ind.line.style.opacity = '0';
+        ind.label.style.opacity = '0';
+        ind.grip.style.transform = '';
+        ind.grip.style.filter = '';
+      }
+      if (radiusHandle.current) {
+        for (const handle of radiusHandle.current.handles) {
+          delete (handle as any).dataset.dragging;
+          handle.style.transform = 'translate(-50%,-50%)';
+          handle.style.filter = '';
+        }
+        radiusHandle.current.label.style.opacity = '0';
+      }
+      document.documentElement.style.cursor = '';
+      document.documentElement.style.userSelect = '';
     }
   }, [selectedNodeId, isPickingElement, domTree]);
 
   // ---- Cleanup on unmount ----
   useEffect(() => {
     return () => {
+      for (const ind of marginIndicators.current) ind.container.remove();
+      marginIndicators.current = [];
       for (const ind of paddingIndicators.current) ind.container.remove();
       paddingIndicators.current = [];
       for (const ind of gapIndicators.current) ind.container.remove();

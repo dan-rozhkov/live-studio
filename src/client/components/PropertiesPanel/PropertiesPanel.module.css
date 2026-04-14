@@ -66,7 +66,6 @@
   border-radius: 4px;
   cursor: pointer;
   padding: 0;
-  transition: color 0.1s, background 0.1s;
 }
 
 .headerBtn:hover:not(:disabled) {
@@ -153,7 +152,6 @@
   border-radius: 4px;
   cursor: pointer;
   padding: 0;
-  transition: color 0.1s, background 0.1s;
 }
 
 .sectionActionBtn:hover {

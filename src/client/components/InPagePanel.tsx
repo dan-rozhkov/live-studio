@@ -18,6 +18,7 @@ import { useElementPicker } from '../hooks/use-element-picker';
 import { useMcpDirect } from '../hooks/use-mcp-direct';
 import { useInlineEdit } from '../hooks/use-inline-edit';
 import { useKeyboard } from '../hooks/use-keyboard';
+import { useSelectedClickGuard } from '../hooks/use-selected-click-guard';
 import { useUndoStore } from '../hooks/use-undo';
 import { applyUndoEntry } from '../hooks/use-apply-undo';
 
@@ -55,6 +56,9 @@ export function InPagePanel() {
 
   // DOM tree observation (MutationObserver + tree sync)
   usePageBridge();
+
+  // Prevent the host page from receiving clicks on the selected element
+  useSelectedClickGuard();
 
   // MCP WebSocket connection
   const { sendEdit, sendAnswer, sendUserMessage } = useMcpDirect();

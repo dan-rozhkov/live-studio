@@ -13,6 +13,7 @@ dist/
 .fleet
 .idea
 .playwright-mcp
+.obsidian/
 
 # Local env files
 .env

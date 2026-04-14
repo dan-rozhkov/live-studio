@@ -45,6 +45,10 @@
   background: var(--cs-feint);
 }
 
+.collapseToggle:focus {
+  outline: none;
+}
+
 .toolbarButton {
   width: 28px;
   height: 28px;
@@ -62,6 +66,10 @@
 
 .toolbarButton:hover {
   background: var(--cs-feint);
+}
+
+.toolbarButton:focus {
+  outline: none;
 }
 
 .toolbarButton:disabled {

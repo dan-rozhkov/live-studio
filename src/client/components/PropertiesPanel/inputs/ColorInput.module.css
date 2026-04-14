@@ -169,7 +169,7 @@
 
 .channelRow {
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  gap: 8px;
   display: grid;
 }
 
@@ -246,7 +246,7 @@
 
 .bottomRow {
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  gap: 8px;
   display: grid;
 }
 
@@ -294,7 +294,7 @@
 .colorGroup {
   flex: 1;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   display: flex;
 }

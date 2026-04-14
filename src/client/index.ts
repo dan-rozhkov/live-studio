@@ -8,17 +8,17 @@ import { InPagePanel } from './components/InPagePanel';
 const THEME_CSS = /* css */ `
   :host {
     /* Colors */
-    --ls-bg: #1e1e2e;
-    --ls-bg-surface: #262637;
-    --ls-bg-hover: #2e2e42;
-    --ls-bg-active: #383850;
-    --ls-border: #3a3a52;
-    --ls-text: #e0e0ec;
-    --ls-text-secondary: #9494b0;
-    --ls-text-muted: #6c6c88;
-    --ls-accent: #6c8cff;
-    --ls-accent-hover: #8aa4ff;
-    --ls-accent-active: #5470e0;
+    --ls-bg: #2C2C2C;
+    --ls-bg-surface: #333333;
+    --ls-bg-hover: #383838;
+    --ls-bg-active: #444444;
+    --ls-border: #444444;
+    --ls-text: #FFFFFF;
+    --ls-text-secondary: #B3B3B3;
+    --ls-text-muted: #8C8C8C;
+    --ls-accent: #0D99FF;
+    --ls-accent-hover: #38B0FF;
+    --ls-accent-active: #0A80D9;
     --ls-danger: #f05050;
     --ls-success: #4cbb7c;
     --ls-warning: #e8a040;
@@ -74,8 +74,8 @@ const THEME_CSS = /* css */ `
     --cs-fill-bg: var(--ls-bg);
     --cs-font: var(--ls-font);
     --cs-font-mono: var(--ls-font-mono);
-    --cs-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236c6c88' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    --cs-checker: repeating-conic-gradient(#3a3a52 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
+    --cs-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238C8C8C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --cs-checker: repeating-conic-gradient(#444444 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
 
     /* Reset — prevent host page styles from leaking in */
     all: initial;
@@ -94,17 +94,17 @@ const THEME_CSS = /* css */ `
   }
 
   :host([data-theme="light"]) {
-    --ls-bg: #f5f5f7;
-    --ls-bg-surface: #ffffff;
-    --ls-bg-hover: #ededf0;
-    --ls-bg-active: #e0e0e5;
-    --ls-border: #d8d8e0;
-    --ls-text: #1a1a2e;
-    --ls-text-secondary: #5a5a72;
-    --ls-text-muted: #8888a0;
-    --ls-accent: #4a6cf7;
-    --ls-accent-hover: #3a5ce0;
-    --ls-accent-active: #2a4cd0;
+    --ls-bg: #F5F5F5;
+    --ls-bg-surface: #FFFFFF;
+    --ls-bg-hover: #E8E8E8;
+    --ls-bg-active: #D9D9D9;
+    --ls-border: #D9D9D9;
+    --ls-text: #1E1E1E;
+    --ls-text-secondary: #6B6B6B;
+    --ls-text-muted: #8C8C8C;
+    --ls-accent: #0C8CE9;
+    --ls-accent-hover: #0A7BD0;
+    --ls-accent-active: #086AB8;
     --ls-danger: #dc3545;
     --ls-success: #28a745;
     --ls-warning: #d4912a;
@@ -114,8 +114,8 @@ const THEME_CSS = /* css */ `
 
     --cs-black: #ffffff;
     --cs-on-accent: #ffffff;
-    --cs-checker: repeating-conic-gradient(#d8d8e0 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
-    --cs-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235a5a72' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --cs-checker: repeating-conic-gradient(#D9D9D9 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
+    --cs-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B6B6B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
     color-scheme: light;
   }

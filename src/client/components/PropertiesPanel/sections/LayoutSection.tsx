@@ -3,31 +3,19 @@ import { useState } from 'preact/hooks';
 import {
   ArrowRight, ArrowDown, ArrowLeft, ArrowUp,
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
-  StretchVertical, Baseline, Minus, ChevronRight,
+  StretchVertical, Baseline, Minus, ChevronRight, InspectionPanel,
 } from 'lucide-preact';
 import { NumberInput } from '../inputs/NumberInput';
 import { SelectInput } from '../inputs/SelectInput';
-import { PairedNumberInput } from '../inputs/PairedNumberInput';
+import { PairedNumberInput, PairedField } from '../inputs/PairedNumberInput';
 import { IconToggleGroup } from '../inputs/IconToggleGroup';
 import inputStyles from '../inputs/inputs.module.css';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
 const DISPLAY_OPTIONS = [
   'block', 'flex', 'grid', 'inline', 'inline-block', 'inline-flex', 'inline-grid', 'none',
 ];
 
 const POSITION_OPTIONS = ['static', 'relative', 'absolute', 'fixed', 'sticky'];
-
-const JUSTIFY_OPTIONS = [
-  'flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly',
-];
-
-const ALIGN_ITEMS_OPTIONS = [
-  'stretch', 'flex-start', 'center', 'flex-end', 'baseline',
-];
 
 const ALIGN_SELF_OPTIONS = [
   { value: 'auto', icon: Minus, title: 'Auto' },
@@ -47,9 +35,97 @@ const FLEX_DIRECTION_OPTIONS = [
   { value: 'column-reverse', icon: ArrowUp, title: 'Column Reverse' },
 ];
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const JUSTIFY_VALUES = ['flex-start', 'center', 'flex-end'] as const;
+const ALIGN_VALUES = ['flex-start', 'center', 'flex-end'] as const;
+
+function normalizeFlexValue(v: string): 'flex-start' | 'center' | 'flex-end' {
+  if (v === 'center') return 'center';
+  if (v === 'flex-end' || v === 'end') return 'flex-end';
+  return 'flex-start';
+}
+
+function AlignmentLines({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <line x1="2" y1="4" x2="12" y2="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <line x1="2" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <line x1="2" y1="10" x2="8" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+    </svg>
+  );
+}
+
+function AlignmentGrid({
+  justifyContent,
+  alignItems,
+  onChange,
+}: {
+  justifyContent: string;
+  alignItems: string;
+  onChange: (justify: string, align: string) => void;
+}) {
+  const activeJ = normalizeFlexValue(justifyContent);
+  const activeA = normalizeFlexValue(alignItems);
+
+  return (
+    <div class={inputStyles.alignmentGrid}>
+      {ALIGN_VALUES.map((align) =>
+        JUSTIFY_VALUES.map((justify) => {
+          const isActive = justify === activeJ && align === activeA;
+          return (
+            <button
+              key={`${justify}-${align}`}
+              class={`${inputStyles.alignmentCell} ${isActive ? inputStyles.alignmentCellActive : ''}`}
+              title={`${justify} / ${align}`}
+              onClick={() => onChange(justify, align)}
+            >
+              {isActive ? <AlignmentLines /> : <span class={inputStyles.alignmentDot} />}
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function MarginHIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="0" y="3" width="1.5" height="8" rx="0.5" fill="currentColor" opacity="0.5" />
+      <rect x="12.5" y="3" width="1.5" height="8" rx="0.5" fill="currentColor" opacity="0.5" />
+      <line x1="4" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1" stroke-dasharray="1.5 1.5" />
+    </svg>
+  );
+}
+
+function MarginVIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="3" y="0" width="8" height="1.5" rx="0.5" fill="currentColor" opacity="0.5" />
+      <rect x="3" y="12.5" width="8" height="1.5" rx="0.5" fill="currentColor" opacity="0.5" />
+      <line x1="7" y1="4" x2="7" y2="10" stroke="currentColor" stroke-width="1" stroke-dasharray="1.5 1.5" />
+    </svg>
+  );
+}
+
+function PaddingHIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="1" y="3" width="1.5" height="8" rx="0.5" fill="currentColor" />
+      <rect x="11.5" y="3" width="1.5" height="8" rx="0.5" fill="currentColor" />
+      <circle cx="7" cy="7" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function PaddingVIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="3" y="1" width="8" height="1.5" rx="0.5" fill="currentColor" />
+      <rect x="3" y="11.5" width="8" height="1.5" rx="0.5" fill="currentColor" />
+      <circle cx="7" cy="7" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
 
 export interface LayoutSectionProps {
   getValue: (prop: string) => string;
@@ -65,6 +141,8 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
   const showGap = isFlex || isGrid;
   const isFlexChild = parentDisplay === 'flex' || parentDisplay === 'inline-flex';
   const [expandMinMax, setExpandMinMax] = useState(false);
+  const [expandMargin, setExpandMargin] = useState(false);
+  const [expandPadding, setExpandPadding] = useState(false);
 
   return (
     <>
@@ -140,77 +218,159 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
 
       {/* Margin */}
       <div class={inputStyles.subLabel}>Margin</div>
-      <PairedNumberInput
-        prefixA="T"
-        prefixB="B"
-        valueA={getValue('margin-top')}
-        valueB={getValue('margin-bottom')}
-        onChangeA={(v) => onChange('margin-top', v)}
-        onChangeB={(v) => onChange('margin-bottom', v)}
-      />
-      <PairedNumberInput
-        prefixA="L"
-        prefixB="R"
-        valueA={getValue('margin-left')}
-        valueB={getValue('margin-right')}
-        onChangeA={(v) => onChange('margin-left', v)}
-        onChangeB={(v) => onChange('margin-right', v)}
-      />
-
-      {/* Padding */}
-      <div class={inputStyles.subLabel}>Padding</div>
-      <PairedNumberInput
-        prefixA="T"
-        prefixB="B"
-        valueA={getValue('padding-top')}
-        valueB={getValue('padding-bottom')}
-        onChangeA={(v) => onChange('padding-top', v)}
-        onChangeB={(v) => onChange('padding-bottom', v)}
-      />
-      <PairedNumberInput
-        prefixA="L"
-        prefixB="R"
-        valueA={getValue('padding-left')}
-        valueB={getValue('padding-right')}
-        onChangeA={(v) => onChange('padding-left', v)}
-        onChangeB={(v) => onChange('padding-right', v)}
-      />
-
-      {/* Flex container properties */}
-      {isFlex && (
+      {!expandMargin ? (
+        <div class={inputStyles.paddingCompactRow}>
+          <PairedField
+            startContent={<MarginHIcon />}
+            value={getValue('margin-left')}
+            onChange={(v) => {
+              onChange('margin-left', v);
+              onChange('margin-right', v);
+            }}
+          />
+          <PairedField
+            startContent={<MarginVIcon />}
+            value={getValue('margin-top')}
+            onChange={(v) => {
+              onChange('margin-top', v);
+              onChange('margin-bottom', v);
+            }}
+          />
+          <button
+            class={inputStyles.pairedEndIcon}
+            title="Expand individual margin"
+            onClick={() => setExpandMargin(true)}
+          >
+            <InspectionPanel size={10} />
+          </button>
+        </div>
+      ) : (
         <>
-          <SelectInput
-            label="justify-content"
-            displayName="Justify"
-            value={getValue('justify-content')}
-            options={JUSTIFY_OPTIONS}
-            onChange={(v) => onChange('justify-content', v)}
+          <PairedNumberInput
+            prefixA="T"
+            prefixB="B"
+            valueA={getValue('margin-top')}
+            valueB={getValue('margin-bottom')}
+            onChangeA={(v) => onChange('margin-top', v)}
+            onChangeB={(v) => onChange('margin-bottom', v)}
+            endContent={<div style={{ width: 24, flexShrink: 0 }} />}
           />
-          <SelectInput
-            label="align-items"
-            displayName="Align"
-            value={getValue('align-items') || 'stretch'}
-            options={ALIGN_ITEMS_OPTIONS}
-            onChange={(v) => onChange('align-items', v)}
-          />
-          <SelectInput
-            label="flex-wrap"
-            displayName="Wrap"
-            value={getValue('flex-wrap') || 'nowrap'}
-            options={FLEX_WRAP_OPTIONS}
-            onChange={(v) => onChange('flex-wrap', v)}
+          <PairedNumberInput
+            prefixA="L"
+            prefixB="R"
+            valueA={getValue('margin-left')}
+            valueB={getValue('margin-right')}
+            onChangeA={(v) => onChange('margin-left', v)}
+            onChangeB={(v) => onChange('margin-right', v)}
+            endContent={
+              <button
+                class={inputStyles.pairedEndIcon}
+                title="Collapse margin"
+                onClick={() => setExpandMargin(false)}
+              >
+                <InspectionPanel size={10} />
+              </button>
+            }
           />
         </>
       )}
 
-      {/* Gap (flex/grid) */}
-      {showGap && (
-        <NumberInput
-          label="gap"
-          displayName="Gap"
-          value={getValue('gap')}
-          onChange={(v) => onChange('gap', v)}
-        />
+      {/* Alignment grid + Gap (flex/grid) */}
+      {(isFlex || isGrid) && (
+        <div class={inputStyles.alignGapRow}>
+          <div class={inputStyles.alignGapCol}>
+            <div class={inputStyles.subLabel}>Alignment</div>
+            <AlignmentGrid
+              justifyContent={getValue('justify-content') || 'flex-start'}
+              alignItems={getValue('align-items') || 'stretch'}
+              onChange={(j, a) => {
+                onChange('justify-content', j);
+                onChange('align-items', a);
+              }}
+            />
+          </div>
+          <div class={inputStyles.alignGapCol}>
+            <div class={inputStyles.labelAboveLabel}>Gap</div>
+            <NumberInput
+              label="gap"
+              displayName=""
+              value={getValue('gap')}
+              onChange={(v) => onChange('gap', v)}
+              showSlider={false}
+            />
+            {isFlex && (
+              <>
+                <div class={inputStyles.labelAboveLabel}>Wrap</div>
+                <SelectInput
+                  label="flex-wrap"
+                  displayName=""
+                  value={getValue('flex-wrap') || 'nowrap'}
+                  options={FLEX_WRAP_OPTIONS}
+                  onChange={(v) => onChange('flex-wrap', v)}
+                />
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Padding */}
+      <div class={inputStyles.subLabel}>Padding</div>
+      {!expandPadding ? (
+        <div class={inputStyles.paddingCompactRow}>
+          <PairedField
+            startContent={<PaddingHIcon />}
+            value={getValue('padding-left')}
+            onChange={(v) => {
+              onChange('padding-left', v);
+              onChange('padding-right', v);
+            }}
+          />
+          <PairedField
+            startContent={<PaddingVIcon />}
+            value={getValue('padding-top')}
+            onChange={(v) => {
+              onChange('padding-top', v);
+              onChange('padding-bottom', v);
+            }}
+          />
+          <button
+            class={inputStyles.pairedEndIcon}
+            title="Expand individual padding"
+            onClick={() => setExpandPadding(true)}
+          >
+            <InspectionPanel size={10} />
+          </button>
+        </div>
+      ) : (
+        <>
+          <PairedNumberInput
+            prefixA="T"
+            prefixB="B"
+            valueA={getValue('padding-top')}
+            valueB={getValue('padding-bottom')}
+            onChangeA={(v) => onChange('padding-top', v)}
+            onChangeB={(v) => onChange('padding-bottom', v)}
+            endContent={<div style={{ width: 24, flexShrink: 0 }} />}
+          />
+          <PairedNumberInput
+            prefixA="L"
+            prefixB="R"
+            valueA={getValue('padding-left')}
+            valueB={getValue('padding-right')}
+            onChangeA={(v) => onChange('padding-left', v)}
+            onChangeB={(v) => onChange('padding-right', v)}
+            endContent={
+              <button
+                class={inputStyles.pairedEndIcon}
+                title="Collapse padding"
+                onClick={() => setExpandPadding(false)}
+              >
+                <InspectionPanel size={10} />
+              </button>
+            }
+          />
+        </>
       )}
 
       {/* Flex child properties */}
