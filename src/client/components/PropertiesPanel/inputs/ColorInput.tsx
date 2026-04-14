@@ -803,7 +803,7 @@ export function ColorInput({
   }, []);
 
   const isValid = parseCssColor(value) !== null;
-  const displayLabel = displayName || label;
+  const displayLabel = displayName !== undefined ? displayName : label;
   const swatchRgba = hsvaToRgba(hsva);
   const swatchStyle = {
     backgroundColor: `rgba(${swatchRgba.r},${swatchRgba.g},${swatchRgba.b},${swatchRgba.a})`,

@@ -255,34 +255,33 @@ export function NumberInput({
     }
   }, [localValue, value, commitValue, onChange]);
 
+  const handleStepBy = useCallback((multiplier: number) => {
+    const num = parseFloat(localValue) + resolvedStep * multiplier;
+    const display = formatValue(num);
+    setLocalValue(display);
+    onChange(commitValue(display));
+  }, [localValue, resolvedStep, formatValue, commitValue, onChange]);
+
   const handleKeyDown = useCallback(
     (e: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
         isEditingRef.current = false;
         onChange(commitValue(localValue));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        handleStepBy(e.shiftKey ? 10 : 1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        handleStepBy(e.shiftKey ? -10 : -1);
       }
     },
-    [localValue, commitValue, onChange],
+    [localValue, commitValue, onChange, handleStepBy],
   );
 
   const handleFocus = useCallback(() => {
     isEditingRef.current = true;
     onFocus?.();
   }, [onFocus]);
-
-  const handleStepUp = useCallback(() => {
-    const num = parseFloat(localValue) + resolvedStep;
-    const display = formatValue(num);
-    setLocalValue(display);
-    onChange(commitValue(display));
-  }, [localValue, resolvedStep, formatValue, commitValue, onChange]);
-
-  const handleStepDown = useCallback(() => {
-    const num = parseFloat(localValue) - resolvedStep;
-    const display = formatValue(num);
-    setLocalValue(display);
-    onChange(commitValue(display));
-  }, [localValue, resolvedStep, formatValue, commitValue, onChange]);
 
   const handleStepperPointerDown = useCallback(
     (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
@@ -316,12 +315,12 @@ export function NumberInput({
       const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
       const midY = rect.top + rect.height / 2;
       if (dragStartY.current < midY) {
-        handleStepUp();
+        handleStepBy(1);
       } else {
-        handleStepDown();
+        handleStepBy(-1);
       }
     },
-    [handleStepUp, handleStepDown],
+    [handleStepBy],
   );
 
   /* ── Slider fill calculation ── */

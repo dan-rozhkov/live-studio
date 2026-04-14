@@ -14,6 +14,7 @@ dist/
 .idea
 .playwright-mcp
 .obsidian/
+docs/
 
 # Local env files
 .env

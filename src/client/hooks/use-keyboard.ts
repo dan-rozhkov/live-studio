@@ -238,4 +238,24 @@ export function useKeyboard(opts: UseKeyboardOptions = {}): void {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [handleSelectNode]);
+
+  // ── Shift+Enter → select parent node ─────────────────────────────
+  useEffect(() => {
+    if (!handleSelectNode) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) return;
+      if (!(e.shiftKey && e.key === 'Enter')) return;
+
+      const store = useStore.getState();
+      if (!store.domTree || store.selectedNodeId === null) return;
+
+      const path = findNodePath(store.domTree, store.selectedNodeId);
+      if (path && path.length >= 2) {
+        e.preventDefault();
+        handleSelectNode(path[path.length - 2]);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleSelectNode]);
 }

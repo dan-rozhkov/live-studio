@@ -65,6 +65,17 @@ export function PairedField({
       if (e.key === 'Enter') {
         isEditing.current = false;
         onChange(commit(local));
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const unit = unitRef.current;
+        const baseStep = (unit === 'rem' || unit === 'em') ? 0.25 : 1;
+        const multiplier = e.key === 'ArrowUp'
+          ? (e.shiftKey ? 10 : 1)
+          : (e.shiftKey ? -10 : -1);
+        const newNum = parseFloat(local) + baseStep * multiplier;
+        const display = unit === 'px' ? String(Math.round(newNum)) : String(parseFloat(newNum.toFixed(2)));
+        setLocal(display);
+        onChange(unit ? `${display}${unit}` : display);
       }
     },
     [local, commit, onChange],

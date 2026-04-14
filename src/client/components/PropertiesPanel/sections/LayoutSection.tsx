@@ -294,7 +294,7 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
             <NumberInput
               label="gap"
               displayName=""
-              value={getValue('gap')}
+              value={getValue('row-gap')}
               onChange={(v) => onChange('gap', v)}
               showSlider={false}
             />
@@ -376,25 +376,13 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
       {/* Flex child properties */}
       {isFlexChild && (
         <>
-          <NumberInput
-            label="flex-grow"
-            displayName="Grow"
-            value={getValue('flex-grow')}
-            min={0}
-            max={10}
-            step={1}
-            unit=""
-            onChange={(v) => onChange('flex-grow', v)}
-          />
-          <NumberInput
-            label="flex-shrink"
-            displayName="Shrink"
-            value={getValue('flex-shrink')}
-            min={0}
-            max={10}
-            step={1}
-            unit=""
-            onChange={(v) => onChange('flex-shrink', v)}
+          <PairedNumberInput
+            prefixA="Grow"
+            prefixB="Shrink"
+            valueA={getValue('flex-grow')}
+            valueB={getValue('flex-shrink')}
+            onChangeA={(v) => onChange('flex-grow', v)}
+            onChangeB={(v) => onChange('flex-shrink', v)}
           />
           <NumberInput
             label="flex-basis"
