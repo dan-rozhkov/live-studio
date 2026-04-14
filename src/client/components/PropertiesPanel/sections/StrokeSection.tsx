@@ -2,6 +2,7 @@ import { h, Fragment } from 'preact';
 import { NumberInput } from '../inputs/NumberInput';
 import { SelectInput } from '../inputs/SelectInput';
 import { ColorInput } from '../inputs/ColorInput';
+import { VariablePicker } from '../inputs/VariablePicker';
 
 const BORDER_STYLE_OPTIONS = [
   'none', 'solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'inset', 'outset',
@@ -20,6 +21,7 @@ export function StrokeSection({ getValue, onChange }: StrokeSectionProps) {
         displayName="Color"
         value={getValue('border-color')}
         onChange={(v) => onChange('border-color', v)}
+        endContent={<VariablePicker value={getValue('border-color')} onChange={(v) => onChange('border-color', v)} filter="color" />}
       />
       <NumberInput
         label="border-width"
@@ -30,6 +32,7 @@ export function StrokeSection({ getValue, onChange }: StrokeSectionProps) {
         step={1}
         unit="px"
         onChange={(v) => onChange('border-width', v)}
+        endContent={<VariablePicker value={getValue('border-width')} onChange={(v) => onChange('border-width', v)} filter="number" />}
       />
       <SelectInput
         label="border-style"

@@ -1,0 +1,150 @@
+.wrapper {
+  position: absolute;
+  right: 2px;
+  top: calc(50% - 8px);
+  z-index: 2;
+}
+
+.button {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+/* Show on hover of any ancestor input wrapper */
+*:hover > .wrapper > .button,
+.button:focus,
+.buttonActive {
+  opacity: 1;
+}
+
+.button:hover {
+  color: var(--cs-foreground);
+}
+
+.buttonActive {
+  color: var(--cs-accent);
+}
+
+.buttonActive:hover {
+  color: var(--cs-accent);
+}
+
+.dropdown {
+  z-index: 10;
+  background: var(--ls-bg);
+  border: 1px solid var(--cs-input-border);
+  border-radius: 10px;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 200px;
+  padding: 8px;
+  position: fixed;
+  overflow-y: auto;
+  box-shadow: var(--ls-shadow-lg);
+}
+
+.dropdown::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+  background: none;
+}
+
+.dropdown::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.dropdown::-webkit-scrollbar-corner {
+  background: none;
+}
+
+.search {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--cs-input-bg);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font);
+  font-size: 12px;
+  padding: 2px 4px;
+  height: 24px;
+  margin-bottom: 4px;
+  outline: none;
+}
+
+.search:hover {
+  border-color: var(--cs-input-border);
+}
+
+.search:focus {
+  border-color: transparent;
+  border-bottom-color: var(--cs-accent);
+}
+
+.item {
+  width: 100%;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font);
+  cursor: pointer;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  display: flex;
+}
+
+.item:hover,
+.itemActive {
+  background: var(--cs-feint);
+}
+
+.colorSwatch {
+  border-radius: 3px;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.tokenName {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tokenValue {
+  color: var(--cs-feint-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  max-width: 80px;
+  font-size: 11px;
+  overflow: hidden;
+}
+
+.empty {
+  color: var(--cs-feint-text);
+  font-size: 12px;
+  padding: 8px;
+  text-align: center;
+}

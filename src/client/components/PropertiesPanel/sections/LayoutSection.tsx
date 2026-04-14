@@ -9,6 +9,7 @@ import { NumberInput } from '../inputs/NumberInput';
 import { SelectInput } from '../inputs/SelectInput';
 import { PairedNumberInput, PairedField } from '../inputs/PairedNumberInput';
 import { IconToggleGroup } from '../inputs/IconToggleGroup';
+import { VariablePicker } from '../inputs/VariablePicker';
 import inputStyles from '../inputs/inputs.module.css';
 
 const DISPLAY_OPTIONS = [
@@ -183,6 +184,8 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
         valueB={getValue('height')}
         onChangeA={(v) => onChange('width', v)}
         onChangeB={(v) => onChange('height', v)}
+        endContentA={<VariablePicker value={getValue('width')} onChange={(v) => onChange('width', v)} filter="number" />}
+        endContentB={<VariablePicker value={getValue('height')} onChange={(v) => onChange('height', v)} filter="number" />}
         endContent={
           <button
             class={inputStyles.pairedEndIcon}
@@ -227,6 +230,7 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
               onChange('margin-left', v);
               onChange('margin-right', v);
             }}
+            endContent={<VariablePicker value={getValue('margin-left')} onChange={(v) => { onChange('margin-left', v); onChange('margin-right', v); }} filter="number" />}
           />
           <PairedField
             startContent={<MarginVIcon />}
@@ -235,6 +239,7 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
               onChange('margin-top', v);
               onChange('margin-bottom', v);
             }}
+            endContent={<VariablePicker value={getValue('margin-top')} onChange={(v) => { onChange('margin-top', v); onChange('margin-bottom', v); }} filter="number" />}
           />
           <button
             class={inputStyles.pairedEndIcon}
@@ -297,6 +302,7 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
               value={getValue('row-gap')}
               onChange={(v) => onChange('gap', v)}
               showSlider={false}
+              endContent={<VariablePicker value={getValue('row-gap')} onChange={(v) => onChange('gap', v)} filter="number" />}
             />
             {isFlex && (
               <>
@@ -325,6 +331,7 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
               onChange('padding-left', v);
               onChange('padding-right', v);
             }}
+            endContent={<VariablePicker value={getValue('padding-left')} onChange={(v) => { onChange('padding-left', v); onChange('padding-right', v); }} filter="number" />}
           />
           <PairedField
             startContent={<PaddingVIcon />}
@@ -333,6 +340,7 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
               onChange('padding-top', v);
               onChange('padding-bottom', v);
             }}
+            endContent={<VariablePicker value={getValue('padding-top')} onChange={(v) => { onChange('padding-top', v); onChange('padding-bottom', v); }} filter="number" />}
           />
           <button
             class={inputStyles.pairedEndIcon}
@@ -383,13 +391,6 @@ export function LayoutSection({ getValue, onChange, parentDisplay }: LayoutSecti
             valueB={getValue('flex-shrink')}
             onChangeA={(v) => onChange('flex-grow', v)}
             onChangeB={(v) => onChange('flex-shrink', v)}
-          />
-          <NumberInput
-            label="flex-basis"
-            displayName="Basis"
-            value={getValue('flex-basis')}
-            onChange={(v) => onChange('flex-basis', v)}
-            showSlider={false}
           />
           <div class={inputStyles.row}>
             <label class={inputStyles.label}>Align Self</label>

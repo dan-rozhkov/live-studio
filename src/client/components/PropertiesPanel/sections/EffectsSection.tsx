@@ -1,6 +1,7 @@
 import { h, Fragment } from 'preact';
 import { TextInput } from '../inputs/TextInput';
 import { SelectInput } from '../inputs/SelectInput';
+import { VariablePicker } from '../inputs/VariablePicker';
 
 const CURSOR_OPTIONS = [
   'auto', 'default', 'pointer', 'move', 'text', 'wait', 'help',
@@ -22,6 +23,7 @@ export function EffectsSection({ getValue, onChange }: EffectsSectionProps) {
         displayName="Shadow"
         value={getValue('box-shadow')}
         onChange={(v) => onChange('box-shadow', v)}
+        endContent={<VariablePicker value={getValue('box-shadow')} onChange={(v) => onChange('box-shadow', v)} />}
       />
       <SelectInput
         label="cursor"

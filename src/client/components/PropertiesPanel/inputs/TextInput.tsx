@@ -10,6 +10,7 @@ export interface TextInputProps {
   mono?: boolean;
   indent?: boolean;
   placeholder?: string;
+  endContent?: JSX.Element;
   onChange: (value: string) => void;
   onFocus?: () => void;
   onLabelDoubleClick?: () => void;
@@ -23,6 +24,7 @@ export function TextInput({
   mono,
   indent = false,
   placeholder,
+  endContent,
   onChange,
   onFocus,
   onLabelDoubleClick,
@@ -64,16 +66,20 @@ export function TextInput({
           {labelText}
         </label>
       )}
-      <input
-        type="text"
-        class={styles.textInput}
-        value={localValue}
-        placeholder={placeholder}
-        onInput={handleChange}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        onFocus={onFocus}
-      />
+      <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+        <input
+          type="text"
+          class={styles.textInput}
+          value={localValue}
+          placeholder={placeholder}
+          onInput={handleChange}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          onFocus={onFocus}
+          style={endContent ? { paddingRight: '20px' } : undefined}
+        />
+        {endContent}
+      </div>
     </div>
   );
 }

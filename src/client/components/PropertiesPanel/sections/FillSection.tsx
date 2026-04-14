@@ -2,6 +2,7 @@ import { h, Fragment } from 'preact';
 import { useState, useCallback, useRef } from 'preact/hooks';
 import { Eye, EyeOff, Minus } from 'lucide-preact';
 import { ColorInput } from '../inputs/ColorInput';
+import { VariablePicker } from '../inputs/VariablePicker';
 import inputStyles from '../inputs/inputs.module.css';
 
 export interface FillSectionProps {
@@ -35,6 +36,7 @@ export function FillSection({ getValue, onChange }: FillSectionProps) {
         displayName=""
         value={value}
         onChange={(v) => onChange('background-color', v)}
+        endContent={<VariablePicker value={value} onChange={(v) => onChange('background-color', v)} filter="color" />}
       />
       <button class={inputStyles.compactColorAction} onClick={handleToggleVisibility} title="Toggle visibility">
         {visible ? <Eye size={14} /> : <EyeOff size={14} />}

@@ -60,9 +60,10 @@
 
 .textInput {
   background: var(--cs-input-bg);
-  border: 1px solid var(--cs-input-border);
+  border: 1px solid transparent;
   flex: 1;
   min-width: 0;
+  width: 100%;
   color: var(--cs-foreground);
   font-family: var(--cs-font);
   border-radius: 4px;
@@ -72,8 +73,13 @@
   box-sizing: border-box;
 }
 
+.textInput:hover {
+  border-color: var(--cs-input-border);
+}
+
 .textInput:focus {
-  border-color: var(--cs-accent);
+  border-color: transparent;
+  border-bottom-color: var(--cs-accent);
 }
 
 /* NumberInput styles */
@@ -282,6 +288,7 @@
   min-width: 0;
   height: 24px;
   box-sizing: border-box;
+  position: relative;
 }
 
 .pairedInput:hover {

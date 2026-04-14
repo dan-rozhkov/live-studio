@@ -366,7 +366,8 @@ export function NumberInput({
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
           />
-          {resolvedUnit && <span class={styles.unitSuffix}>{resolvedUnit}</span>}
+          {/* unit suffix removed — diamond picker occupies the space */}
+          {endContent}
           <div
             class={styles.steppers}
             onPointerDown={handleStepperPointerDown}
@@ -382,7 +383,6 @@ export function NumberInput({
           </div>
         </div>
       </div>
-      {endContent}
     </div>
   );
 }

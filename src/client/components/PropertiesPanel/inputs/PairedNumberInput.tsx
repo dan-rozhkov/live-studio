@@ -12,6 +12,8 @@ export interface PairedNumberInputProps {
   onChangeA: (value: string) => void;
   onChangeB: (value: string) => void;
   endContent?: preact.ComponentChildren;
+  endContentA?: preact.ComponentChildren;
+  endContentB?: preact.ComponentChildren;
 }
 
 export function extractDisplay(v: string): { display: string; unit: string } {
@@ -24,11 +26,13 @@ export function extractDisplay(v: string): { display: string; unit: string } {
 export function PairedField({
   prefix,
   startContent,
+  endContent,
   value,
   onChange,
 }: {
   prefix?: string;
   startContent?: preact.ComponentChildren;
+  endContent?: preact.ComponentChildren;
   value: string;
   onChange: (v: string) => void;
 }) {
@@ -100,7 +104,8 @@ export function PairedField({
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
       />
-      {unitRef.current && <span class={styles.pairedInputSuffix}>{unitRef.current}</span>}
+      {/* unit suffix removed */}
+      {endContent}
     </div>
   );
 }
@@ -113,11 +118,13 @@ export function PairedNumberInput({
   onChangeA,
   onChangeB,
   endContent,
+  endContentA,
+  endContentB,
 }: PairedNumberInputProps) {
   return (
     <div class={styles.pairedRow}>
-      <PairedField prefix={prefixA} value={valueA} onChange={onChangeA} />
-      <PairedField prefix={prefixB} value={valueB} onChange={onChangeB} />
+      <PairedField prefix={prefixA} value={valueA} onChange={onChangeA} endContent={endContentA} />
+      <PairedField prefix={prefixB} value={valueB} onChange={onChangeB} endContent={endContentB} />
       {endContent}
     </div>
   );

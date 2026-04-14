@@ -2,6 +2,7 @@ import { h, Fragment } from 'preact';
 import { useState } from 'preact/hooks';
 import { ChevronRight } from 'lucide-preact';
 import { NumberInput } from '../inputs/NumberInput';
+import { VariablePicker } from '../inputs/VariablePicker';
 import inputStyles from '../inputs/inputs.module.css';
 
 export interface AppearanceSectionProps {
@@ -31,6 +32,7 @@ export function AppearanceSection({ getValue, onChange }: AppearanceSectionProps
             unit=""
             showSlider={false}
             onChange={(v) => onChange('opacity', v)}
+            endContent={<VariablePicker value={opacityRaw} onChange={(v) => onChange('opacity', v)} filter="number" />}
           />
         </div>
         <div class={inputStyles.labelAboveCell}>
@@ -51,6 +53,7 @@ export function AppearanceSection({ getValue, onChange }: AppearanceSectionProps
                   onChange('border-top-left-radius', v);
                 }
               }}
+              endContent={<VariablePicker value={getValue('border-top-left-radius')} onChange={(v) => { onChange('border-top-left-radius', v); onChange('border-top-right-radius', v); onChange('border-bottom-right-radius', v); onChange('border-bottom-left-radius', v); }} filter="number" />}
             />
             <button
               class={inputStyles.pairedEndIcon}

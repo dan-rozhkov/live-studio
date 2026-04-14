@@ -1,5 +1,6 @@
 import { getElementById, scrollElementIntoView } from '../bridge/dom-bridge';
 import { fetchComputedStyles } from '../bridge/style-bridge';
+import { fetchDesignTokens } from '../bridge/token-bridge';
 import { useStore } from '../state/store';
 
 /**
@@ -17,6 +18,14 @@ export function selectAndFetchStyles(nodeId: number): void {
     store.setComputedStyles(fetchComputedStyles(el));
     const parent = el.parentElement;
     store.setParentDisplay(parent ? window.getComputedStyle(parent).display : '');
+  }
+
+  // Load design tokens once (they come from :root and don't change per element)
+  if (store.designTokens.length === 0) {
+    const tokens = fetchDesignTokens();
+    if (tokens.length > 0) {
+      store.setDesignTokens(tokens);
+    }
   }
 }
 

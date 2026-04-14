@@ -9,6 +9,7 @@ import { TextInput } from '../inputs/TextInput';
 import { SelectInput } from '../inputs/SelectInput';
 import { ColorInput } from '../inputs/ColorInput';
 import { IconToggleGroup } from '../inputs/IconToggleGroup';
+import { VariablePicker } from '../inputs/VariablePicker';
 import inputStyles from '../inputs/inputs.module.css';
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,7 @@ export function TextSection({ getValue, onChange }: TextSectionProps) {
         displayName="Size"
         value={getValue('font-size')}
         onChange={(v) => onChange('font-size', v)}
+        endContent={<VariablePicker value={getValue('font-size')} onChange={(v) => onChange('font-size', v)} filter="number" />}
       />
       <SelectInput
         label="font-weight"
@@ -76,6 +78,7 @@ export function TextSection({ getValue, onChange }: TextSectionProps) {
         displayName="Color"
         value={getValue('color')}
         onChange={(v) => onChange('color', v)}
+        endContent={<VariablePicker value={getValue('color')} onChange={(v) => onChange('color', v)} filter="color" />}
       />
 
       <div class={inputStyles.row}>
@@ -92,12 +95,14 @@ export function TextSection({ getValue, onChange }: TextSectionProps) {
         displayName="Line Height"
         value={getValue('line-height')}
         onChange={(v) => onChange('line-height', v)}
+        endContent={<VariablePicker value={getValue('line-height')} onChange={(v) => onChange('line-height', v)} filter="number" />}
       />
       <NumberInput
         label="letter-spacing"
         displayName="Spacing"
-        value={getValue('letter-spacing')}
+        value={getValue('letter-spacing') === 'normal' ? '' : getValue('letter-spacing')}
         onChange={(v) => onChange('letter-spacing', v)}
+        endContent={<VariablePicker value={getValue('letter-spacing')} onChange={(v) => onChange('letter-spacing', v)} filter="number" />}
       />
 
       <div class={inputStyles.row}>

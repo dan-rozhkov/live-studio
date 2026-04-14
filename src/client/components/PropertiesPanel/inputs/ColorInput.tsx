@@ -687,6 +687,7 @@ export interface ColorInputProps {
   displayName?: string;
   value: string;
   mono?: boolean;
+  endContent?: JSX.Element;
   onChange: (value: string) => void;
   onFocus?: () => void;
   onCustomChange?: (raw: string) => void;
@@ -697,6 +698,7 @@ export function ColorInput({
   displayName,
   value,
   mono,
+  endContent,
   onChange,
   onFocus,
   onCustomChange,
@@ -816,7 +818,7 @@ export function ColorInput({
           {displayLabel}
         </label>
       )}
-      <div class={styles.colorGroup}>
+      <div class={styles.colorGroup} style={{ position: 'relative' }}>
         <div class={styles.swatchWrapper}>
           {!isValid && <div class={styles.emptyColorSwatch} />}
           <button ref={swatchRef} class={styles.swatchButton} onClick={handleSwatchClick}>
@@ -831,7 +833,9 @@ export function ColorInput({
           onBlur={handleTextBlur}
           onKeyDown={handleTextKeyDown}
           onFocus={handleTextFocus}
+          style={endContent ? { paddingRight: '20px' } : undefined}
         />
+        {endContent}
       </div>
       {pickerOpen && anchorRectRef.current && (
         <ColorPicker
