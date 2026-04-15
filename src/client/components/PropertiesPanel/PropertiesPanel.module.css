@@ -55,6 +55,7 @@
 }
 
 .headerBtn {
+  position: relative;
   width: 24px;
   height: 24px;
   display: flex;
@@ -76,6 +77,23 @@
 .headerBtn:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+.badge {
+  min-width: 14px;
+  height: 14px;
+  background: color-mix(in srgb, var(--cs-foreground) 15%, transparent);
+  color: var(--cs-feint-text);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  padding: 0 3px;
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  pointer-events: none;
 }
 
 .sections {

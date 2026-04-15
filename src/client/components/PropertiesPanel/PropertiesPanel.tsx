@@ -1,6 +1,6 @@
 import { h, Fragment } from 'preact';
-import { useState, useCallback, useMemo } from 'preact/hooks';
-import { ChevronRight, ChevronDown, Undo2, Redo2 } from 'lucide-preact';
+import { useState, useCallback, useMemo, useRef } from 'preact/hooks';
+import { ChevronRight, ChevronDown, Undo2, Redo2, Sun, Moon, Clipboard, Check } from 'lucide-preact';
 import { useStore } from '../../state/store';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { LayoutSection } from './sections/LayoutSection';
@@ -90,8 +90,26 @@ export function PropertiesPanel() {
   const parentDisplay = useStore((s) => s.parentDisplay);
   const queueEdit = useStore((s) => s.queueEdit);
   const updateProperty = useStore((s) => s.updateProperty);
+  const stagedChanges = useStore((s) => s.stagedChanges);
+  const theme = useStore((s) => s.theme);
+  const toggleTheme = useStore((s) => s.toggleTheme);
   const hasPast = useUndoStore((s) => s.past.length > 0);
   const hasFuture = useUndoStore((s) => s.future.length > 0);
+  const [copiedChanges, setCopiedChanges] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleCopyChanges = useCallback(() => {
+    if (stagedChanges.length === 0) return;
+    const payload = {
+      changes: stagedChanges,
+      url: location.href,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    };
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    setCopiedChanges(true);
+    clearTimeout(copiedTimerRef.current);
+    copiedTimerRef.current = setTimeout(() => setCopiedChanges(false), 1500);
+  }, [stagedChanges]);
 
   const handleUndo = useCallback(() => {
     const entry = useUndoStore.getState().undo();
@@ -261,6 +279,24 @@ export function PropertiesPanel() {
         <ChevronDown size={12} style={{ color: 'var(--cs-feint-text)' }} />
         <span class={styles.headerSelector}>{selector}</span>
         <div class={styles.headerActions}>
+          <button
+            class={styles.headerBtn}
+            onClick={handleCopyChanges}
+            disabled={stagedChanges.length === 0}
+            title="Copy changes to clipboard"
+          >
+            {copiedChanges ? <Check size={14} /> : <Clipboard size={14} />}
+            {stagedChanges.length > 0 && (
+              <span class={styles.badge}>{stagedChanges.length}</span>
+            )}
+          </button>
+          <button
+            class={styles.headerBtn}
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          >
+            {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+          </button>
           <button
             class={styles.headerBtn}
             onClick={handleUndo}

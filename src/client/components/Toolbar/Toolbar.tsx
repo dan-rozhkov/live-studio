@@ -1,7 +1,7 @@
 import { h, Fragment } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { useStore } from '../../state/store';
-import { MousePointer, ArrowRight, Check, Bot, Code, Sun, Moon, Loader, ChevronsLeft, ChevronsRight, Copy } from 'lucide-preact';
+import { MousePointer, ArrowRight, Check, Bot, Code, Sun, Loader, ChevronsLeft, ChevronsRight, Copy } from 'lucide-preact';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { getElementById } from '../../bridge/dom-bridge';
 import { getVueTracerInfo } from '../../bridge/component-bridge';
@@ -98,9 +98,6 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit }: ToolbarProps)
   const chatOpen = useStore(
     (s) => s.panels.navigator.open && s.panels.navigator.activeTab === 'chat',
   );
-
-  const theme = useStore((s) => s.theme);
-  const toggleTheme = useStore((s) => s.toggleTheme);
 
   const selectedNodeId = useStore((s) => s.selectedNodeId);
   const domTree = useStore((s) => s.domTree);
@@ -268,15 +265,6 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit }: ToolbarProps)
             </IconButton>
           )}
 
-          <div className={styles.separator} />
-
-          {/* Theme toggle */}
-          <IconButton
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-          >
-            {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-          </IconButton>
         </Fragment>
       )}
 
