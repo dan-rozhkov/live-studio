@@ -23,7 +23,7 @@ import type { DomNode } from '../../state/slices/dom-slice';
 // Constants
 // ---------------------------------------------------------------------------
 
-const PADDING_COLOR = '#FF69B4';  // Figma pink
+const PADDING_COLOR = '#FF1493';  // Deep pink
 const GAP_COLOR = '#9747FF';      // Figma purple
 const RADIUS_COLOR = '#0D99FF';   // Selection blue
 const MARGIN_COLOR = '#0D99FF';   // Selection blue

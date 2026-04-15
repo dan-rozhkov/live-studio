@@ -98,7 +98,7 @@ const THEME_CSS = /* css */ `
     --ls-bg-surface: #FFFFFF;
     --ls-bg-hover: #E8E8E8;
     --ls-bg-active: #D9D9D9;
-    --ls-border: #D9D9D9;
+    --ls-border: #E5E5E5;
     --ls-text: #1E1E1E;
     --ls-text-secondary: #6B6B6B;
     --ls-text-muted: #8C8C8C;

@@ -160,8 +160,8 @@
 }
 
 .chevron {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
   transition: transform 0.15s;
   color: var(--cs-feint-text);

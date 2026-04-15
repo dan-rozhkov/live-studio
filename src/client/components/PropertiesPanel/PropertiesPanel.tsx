@@ -63,7 +63,7 @@ function Section({ title, defaultOpen = true, collapsible = true, actions, child
       >
         {collapsible && (
           <ChevronRight
-            size={10}
+            size={14}
             class={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
           />
         )}
@@ -280,20 +280,20 @@ export function PropertiesPanel() {
         </div>
       </div>
       <div class={styles.sections}>
-        <Section title="Layout" collapsible={false}>
+        <Section title="Layout">
           <LayoutSection
             getValue={getValue}
             onChange={handleChange}
             parentDisplay={parentDisplay}
           />
         </Section>
-        <Section title="Text" collapsible={false}>
+        <Section title="Text">
           <TextSection
             getValue={getValue}
             onChange={handleChange}
           />
         </Section>
-        <Section title="Appearance" collapsible={false}>
+        <Section title="Appearance">
           <AppearanceSection
             getValue={getValue}
             onChange={handleChange}

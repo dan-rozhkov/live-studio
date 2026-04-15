@@ -524,7 +524,8 @@ export function ActionBar() {
     queueEdit({ type: 'dom', ...info, value: 'delete' } as Change);
   }, [selectedNodeId, removeFromSelection, clearSelection, queueEdit]);
 
-  if (selectedNodeId === null) return null;
+  const noSelection = selectedNodeId === null;
+  const disabled = noSelection || isProtected;
 
   return (
     <div className={styles.actionBar}>
@@ -532,7 +533,7 @@ export function ActionBar() {
         className={styles.actionBtn}
         title="Add child element"
         onClick={handleAddChild}
-        disabled={isProtected}
+        disabled={disabled}
       >
         <SquarePlus size={14} />
       </button>
@@ -540,7 +541,7 @@ export function ActionBar() {
         className={styles.actionBtn}
         title="Add sibling element"
         onClick={handleAddSibling}
-        disabled={isProtected}
+        disabled={disabled}
       >
         <ListPlus size={14} />
       </button>
@@ -548,7 +549,7 @@ export function ActionBar() {
         className={styles.actionBtn}
         title="Duplicate element (\u2318D)"
         onClick={handleDuplicate}
-        disabled={isProtected}
+        disabled={disabled}
       >
         <Copy size={14} />
       </button>
@@ -556,7 +557,7 @@ export function ActionBar() {
         className={`${styles.actionBtn} ${styles.dangerBtn}`}
         title="Delete element (\u2326)"
         onClick={handleDelete}
-        disabled={isProtected}
+        disabled={disabled}
       >
         <Trash2 size={14} />
       </button>

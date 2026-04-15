@@ -2,6 +2,9 @@ import { useEffect, useCallback } from 'preact/hooks';
 import { useStore } from '../state/store';
 import { useUndoStore, type UndoOp, type UndoDirection } from './use-undo';
 import type { DomNode } from '../state/slices/dom-slice';
+import { getElementById } from '../bridge/dom-bridge';
+import { getVueTracerInfo } from '../bridge/component-bridge';
+import { findAncestorChain } from '../utils/dom-tree';
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -95,6 +98,7 @@ export interface UseKeyboardOptions {
  * - Escape              → cancel picker / deselect
  * - Delete / Backspace  → delete selected element(s)
  * - Cmd/Ctrl+D          → duplicate selected element(s)
+ * - Cmd/Ctrl+C          → copy element info
  * - Cmd/Ctrl+Enter      → send edit
  * - Arrow Up / Down     → navigate visible DOM tree
  * - Arrow Right         → expand / enter children
@@ -149,6 +153,46 @@ export function useKeyboard(opts: UseKeyboardOptions = {}): void {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [clearSelection, undoClear, setPickingElement, setHoveredNodeId]);
+
+  // ── Cmd/Ctrl+C → copy element info ────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (isInputFocused()) return;
+      const isMod = e.metaKey || e.ctrlKey;
+      if (!isMod || e.code !== 'KeyC') return;
+
+      const { selectedNodeId, domTree } = useStore.getState();
+      if (selectedNodeId === null || !domTree) return;
+
+      const chain = findAncestorChain(domTree, selectedNodeId);
+      if (!chain) return;
+
+      e.preventDefault();
+      const lines: string[] = [];
+      lines.push(`Page URL: ${location.href}`);
+      lines.push(`Viewport: ${window.innerWidth}x${window.innerHeight}`);
+
+      const realEl = getElementById(selectedNodeId);
+      const tracerInfo = realEl ? getVueTracerInfo(realEl) : null;
+      if (tracerInfo) {
+        lines.push(`Component Tree: ${tracerInfo.tree}`);
+        lines.push(`File: ${tracerInfo.file}`);
+      } else {
+        const filtered = chain.filter((n) => n.tag !== 'html' && n.tag !== 'body');
+        lines.push(`Component Tree: ${filtered.map((n) => n.tag).join(' > ')}`);
+        for (let i = chain.length - 1; i >= 0; i--) {
+          if (chain[i].sourceFile) {
+            lines.push(`File: ${chain[i].sourceFile}`);
+            break;
+          }
+        }
+      }
+      navigator.clipboard.writeText(lines.join('\n'));
+      window.dispatchEvent(new CustomEvent('livestudio:copied'));
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // ── Cmd+Enter → send edit ────────────────────────────────────────
   useEffect(() => {

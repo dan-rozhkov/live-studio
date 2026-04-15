@@ -5,6 +5,7 @@ import { MousePointer, ArrowRight, Check, Bot, Code, Sun, Moon, Loader, Chevrons
 import type { DomNode } from '../../state/slices/dom-slice';
 import { getElementById } from '../../bridge/dom-bridge';
 import { getVueTracerInfo } from '../../bridge/component-bridge';
+import { findAncestorChain } from '../../utils/dom-tree';
 import styles from './Toolbar.module.css';
 
 /* ------------------------------------------------------------------ */
@@ -35,19 +36,6 @@ function IconButton({ active, muted, mode, disabled, onClick, title, children }:
       {children}
     </button>
   );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Copy element info                                                  */
-/* ------------------------------------------------------------------ */
-
-function findAncestorChain(tree: DomNode, targetId: number): DomNode[] | null {
-  if (tree.id === targetId) return [tree];
-  for (const child of tree.children) {
-    const chain = findAncestorChain(child, targetId);
-    if (chain) return [tree, ...chain];
-  }
-  return null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -177,6 +165,16 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit }: ToolbarProps)
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [selectedNodeId, domTree]);
+
+  // Listen for keyboard-shortcut copy to show check icon
+  useEffect(() => {
+    const handler = () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    };
+    window.addEventListener('livestudio:copied', handler);
+    return () => window.removeEventListener('livestudio:copied', handler);
+  }, []);
 
   // Alt+. shortcut to collapse/expand
   useEffect(() => {

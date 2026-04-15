@@ -447,7 +447,7 @@ export function Panel({ panelId, tabs, onClose, headerSlot, label, children, cla
         <div className={styles.headerRight}>
           {headerSlot}
           <button className={styles.headerButton} onClick={onClose} title="Close">
-            <X size={10} />
+            <X size={14} />
           </button>
         </div>
       </div>

@@ -238,7 +238,7 @@
 .sendButton {
   background: var(--cs-accent);
   height: 32px;
-  color: var(--cs-layer);
+  color: #fff;
   cursor: pointer;
   border: none;
   border-radius: 6px;
