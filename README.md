@@ -39,6 +39,20 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 );
 ```
 
+For source file tracking (so the AI agent knows which file to edit), add the Vite plugin:
+
+```ts
+// vite.config.ts
+import react from "@vitejs/plugin-react";
+import { reactTracer } from "live-studio/vite";
+
+export default defineConfig({
+  plugins: [react(), reactTracer()],
+});
+```
+
+The plugin injects source location attributes in dev mode only — no impact on production builds. Without it, the agent can still edit styles but won't know the exact source file and line number for each component.
+
 ### Next.js (App Router)
 
 Create a client component that loads the editor:
@@ -147,6 +161,27 @@ startStudio({
 ```
 
 The port can also be set via the `LIVE_STUDIO_PORT` environment variable.
+
+## Development
+
+To work on `live-studio` locally and see changes in a target project without publishing:
+
+```bash
+# in the live-studio directory (once)
+npm link
+
+# in your project
+npm link live-studio
+```
+
+Run `npm run dev` in live-studio for watch mode — changes will be picked up automatically.
+
+To switch back to the npm-published version:
+
+```bash
+npm unlink live-studio
+npm install live-studio
+```
 
 ## License
 

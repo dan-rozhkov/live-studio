@@ -1,5 +1,5 @@
 import { getElementById } from '../../bridge/dom-bridge';
-import { detectComponent, getVueTracerInfo } from '../../bridge/component-bridge';
+import { detectComponent, getTracerInfo } from '../../bridge/component-bridge';
 
 export interface Change {
   type: 'style' | 'attribute' | 'text' | 'dom';
@@ -18,8 +18,8 @@ function enrichChange(change: Change, selectedNodeId: number | null): Change {
   const el = getElementById(selectedNodeId);
   if (!el) return change;
 
-  // Try vue-tracer first (exact file:line:column, scoped to component)
-  const tracerInfo = getVueTracerInfo(el);
+  // Try tracer first (vue-tracer or react data-source, exact file:line:column)
+  const tracerInfo = getTracerInfo(el);
   if (tracerInfo) {
     return { ...change, source: change.source || tracerInfo.file };
   }

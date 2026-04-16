@@ -11,7 +11,10 @@
     ".": {
       "import": "./dist/live-studio.mjs"
     },
-    "./style.css": "./dist/live-studio.css"
+    "./style.css": "./dist/live-studio.css",
+    "./vite": {
+      "import": "./dist/vite.mjs"
+    }
   },
   "files": [
     "dist/",

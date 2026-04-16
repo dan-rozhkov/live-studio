@@ -3,7 +3,7 @@ import { useStore } from '../state/store';
 import { useUndoStore, type UndoOp, type UndoDirection } from './use-undo';
 import type { DomNode } from '../state/slices/dom-slice';
 import { getElementById } from '../bridge/dom-bridge';
-import { getVueTracerInfo } from '../bridge/component-bridge';
+import { getTracerInfo } from '../bridge/component-bridge';
 import { findAncestorChain } from '../utils/dom-tree';
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ export function useKeyboard(opts: UseKeyboardOptions = {}): void {
       lines.push(`Viewport: ${window.innerWidth}x${window.innerHeight}`);
 
       const realEl = getElementById(selectedNodeId);
-      const tracerInfo = realEl ? getVueTracerInfo(realEl) : null;
+      const tracerInfo = realEl ? getTracerInfo(realEl) : null;
       if (tracerInfo) {
         lines.push(`Component Tree: ${tracerInfo.tree}`);
         lines.push(`File: ${tracerInfo.file}`);

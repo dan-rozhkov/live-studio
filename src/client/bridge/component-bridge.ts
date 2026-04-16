@@ -10,6 +10,42 @@ export interface ComponentInfo {
   sourceFile?: string;
 }
 
+/** Result of a tracer lookup (vue-tracer or react data-source) */
+export interface TracerResult {
+  /** Element tree within the nearest component (e.g. "div > span") */
+  tree: string;
+  /** Source file with line:column (e.g. "src/App.tsx:8:5") */
+  file: string;
+}
+
+// ---------------------------------------------------------------------------
+// Shared React helpers
+// ---------------------------------------------------------------------------
+
+/** Find the React fiber key on a DOM element (if any). */
+function getReactFiberKey(el: Element): string | undefined {
+  return Object.keys(el).find(
+    (k) => k.startsWith("__reactFiber$") || k.startsWith("__reactInternalInstance$"),
+  );
+}
+
+/** Walk the React fiber tree upward to find the nearest component name. */
+function walkFiberForName(el: Element): string | undefined {
+  const key = getReactFiberKey(el);
+  if (!key) return undefined;
+
+  let fiber: any = (el as any)[key];
+  while (fiber) {
+    const type = fiber.type;
+    if (type && typeof type !== "string") {
+      const n = type.displayName || type.name;
+      if (n) return n;
+    }
+    fiber = fiber.return;
+  }
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // React detection
 // ---------------------------------------------------------------------------
@@ -17,22 +53,25 @@ export interface ComponentInfo {
 /**
  * Attempt to detect a React component that owns the given DOM element.
  *
- * Walks up the React fiber tree looking for a function/class component
- * (skipping host "div"/"span" fibers whose `type` is a plain string).
- *
- * Works with both React 16+ (`__reactFiber$`) and older React 16
- * internal-instance keys (`__reactInternalInstance$`).
- *
- * In development mode React exposes `_debugSource` with file/line info;
- * in production mode only `displayName` / `name` may be available.
+ * Detection order:
+ * 1. `data-source` attributes injected by live-studio/vite reactTracer plugin
+ *    (works with any React version including 19+)
+ * 2. `fiber._debugSource` from React dev-mode JSX transform (React 16-18)
+ * 3. `fiber._debugOwner._debugSource` (React 18 fallback)
  */
 export function detectReactComponent(el: Element): ComponentInfo | null {
-  const fiberKey = Object.keys(el).find(
-    (k) => k.startsWith("__reactFiber$") || k.startsWith("__reactInternalInstance$"),
-  );
-  if (!fiberKey) return null;
+  // 1. Try data-source tracer (version-agnostic, compile-time injection)
+  const source = el.getAttribute("data-source")
+    ?? el.closest("[data-source]")?.getAttribute("data-source");
+  if (source) {
+    return { name: walkFiberForName(el) || "Unknown", sourceFile: source };
+  }
 
-  let fiber: any = (el as any)[fiberKey];
+  // 2. Fallback: walk React fiber tree for _debugSource
+  const key = getReactFiberKey(el);
+  if (!key) return null;
+
+  let fiber: any = (el as any)[key];
   if (!fiber) return null;
 
   while (fiber) {
@@ -49,7 +88,7 @@ export function detectReactComponent(el: Element): ComponentInfo | null {
           info.sourceFile = normaliseFilePath(debug.fileName, debug.lineNumber);
         }
 
-        // React 19+ stores owner info on _debugOwner.type
+        // React 18 fallback: owner's _debugSource
         if (!info.sourceFile && fiber._debugOwner) {
           const ownerDebug = fiber._debugOwner._debugSource;
           if (ownerDebug?.fileName) {
@@ -208,14 +247,15 @@ export function detectComponent(el: Element): ComponentInfo | null {
 }
 
 // ---------------------------------------------------------------------------
-// Component tree (vue-tracer powered)
+// Tracer info (unified Vue + React)
 // ---------------------------------------------------------------------------
 
-export interface VueTracerResult {
-  /** Component tree within the nearest component (e.g. "div > div") */
-  tree: string;
-  /** Source file with line:column (e.g. "node_modules/.../FormField.vue:65:6") */
-  file: string;
+/**
+ * Get tracer-powered element tree and source location.
+ * Tries vue-tracer first, then react data-source attributes.
+ */
+export function getTracerInfo(el: Element): TracerResult | null {
+  return getVueTracerInfo(el) ?? getReactTracerInfo(el) ?? null;
 }
 
 /**
@@ -223,7 +263,7 @@ export interface VueTracerResult {
  * Returns the path from the component root to the selected element,
  * scoped to the nearest component (stops when the source file changes).
  */
-export function getVueTracerInfo(el: Element): VueTracerResult | null {
+export function getVueTracerInfo(el: Element): TracerResult | null {
   const store: any = (globalThis as any).__vue_tracer__;
   if (!store?.vnodeToPos) return null;
 
@@ -281,6 +321,30 @@ export function getVueTracerInfo(el: Element): VueTracerResult | null {
   const file = normaliseFilePath(leaf.pos[0], leaf.pos[1], leaf.pos[2]);
 
   return { tree, file };
+}
+
+/**
+ * Use data-source attributes to get the element tree and exact source location.
+ * Returns the path from the nearest annotated ancestor down to the selected element.
+ */
+export function getReactTracerInfo(el: Element): TracerResult | null {
+  const sourceEl = el.closest("[data-source]");
+  if (!sourceEl) return null;
+
+  const source = sourceEl.getAttribute("data-source")!;
+
+  // Build a tree path from the source element down to el
+  const parts: string[] = [];
+  let cur: Element | null = el;
+  while (cur && cur !== sourceEl.parentElement) {
+    parts.unshift(cur.localName);
+    cur = cur.parentElement;
+  }
+
+  return {
+    tree: parts.join(" > "),
+    file: source,
+  };
 }
 
 // ---------------------------------------------------------------------------

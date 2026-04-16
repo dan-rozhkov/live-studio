@@ -72,16 +72,30 @@ const clientConfig = {
   external: [],
 };
 
+/** @type {import('esbuild').BuildOptions} */
+const vitePluginConfig = {
+  entryPoints: ["src/vite/react-tracer.ts"],
+  outfile: "dist/vite.mjs",
+  bundle: false,
+  format: "esm",
+  platform: "node",
+  target: "node18",
+  sourcemap: !isMinify,
+  minify: isMinify,
+};
+
 async function build() {
   if (isWatch) {
     const serverCtx = await esbuild.context(serverConfig);
     const clientCtx = await esbuild.context(clientConfig);
-    await Promise.all([serverCtx.watch(), clientCtx.watch()]);
+    const viteCtx = await esbuild.context(vitePluginConfig);
+    await Promise.all([serverCtx.watch(), clientCtx.watch(), viteCtx.watch()]);
     console.log("Watching for changes...");
   } else {
     await Promise.all([
       esbuild.build(serverConfig),
       esbuild.build(clientConfig),
+      esbuild.build(vitePluginConfig),
     ]);
     console.log("Build complete.");
   }
