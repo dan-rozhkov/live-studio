@@ -3,24 +3,24 @@
   "version": "0.1.0",
   "description": "Open-source visual CSS editor with MCP for AI agents",
   "type": "module",
-  "main": "dist/live-studio.js",
   "module": "dist/live-studio.mjs",
   "bin": {
     "live-studio": "dist/cli.mjs"
   },
   "exports": {
     ".": {
-      "import": "./dist/live-studio.mjs",
-      "require": "./dist/live-studio.js"
+      "import": "./dist/live-studio.mjs"
     },
     "./style.css": "./dist/live-studio.css"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node esbuild.config.js",
-    "dev": "node esbuild.config.js --watch"
+    "dev": "node esbuild.config.js --watch",
+    "prepublishOnly": "node esbuild.config.js --minify"
   },
   "keywords": [
     "css",
@@ -32,10 +32,6 @@
     "studio"
   ],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/nicekid1/live-studio.git"
-  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "lucide-preact": "^1.8.0",
