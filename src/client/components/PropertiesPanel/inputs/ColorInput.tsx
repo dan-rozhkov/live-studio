@@ -180,17 +180,16 @@ function clamp(v: number) { return Math.max(0, Math.min(1, v)); }
 
 function computePopoverPosition(
   anchorRect: DOMRect,
-  popoverHeight: number,
   popoverWidth: number,
+  popoverHeight: number,
 ) {
-  const MARGIN = 4;
-  let top = anchorRect.bottom + 6;
-  if (top + popoverHeight > window.innerHeight) {
-    top = anchorRect.top - popoverHeight - 6;
-  }
-  let left = anchorRect.left;
-  top = Math.max(MARGIN, Math.min(top, window.innerHeight - popoverHeight - MARGIN));
-  left = Math.max(MARGIN, Math.min(left, window.innerWidth - popoverWidth - MARGIN));
+  const GAP = 4;
+  const spaceBelow = window.innerHeight - anchorRect.bottom - GAP;
+  const spaceAbove = anchorRect.top - GAP;
+  const top = spaceBelow >= popoverHeight || spaceBelow >= spaceAbove
+    ? anchorRect.bottom + GAP
+    : anchorRect.top - popoverHeight - GAP;
+  const left = Math.max(GAP, anchorRect.right - popoverWidth);
   return { top, left };
 }
 
@@ -205,31 +204,27 @@ const supportsEyeDropper = typeof window !== 'undefined' && 'EyeDropper' in wind
    ══════════════════════════════════════════════════════════════ */
 
 const POPOVER_WIDTH = 240;
-const HEADER_HEIGHT = 33;
 
 interface PopoverPanelProps {
-  title: string;
   anchorRect: DOMRect;
-  popoverHeight: number;
   onClose: () => void;
   children: any;
 }
 
-function PopoverPanel({ title, anchorRect, popoverHeight, onClose, children }: PopoverPanelProps) {
+function PopoverPanel({ anchorRect, onClose, children }: PopoverPanelProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-  const dragOffset = useRef({ x: 0, y: 0 });
-  const hasBeenDragged = useRef(false);
+  const measuredHeight = useRef(0);
 
-  const totalHeight = popoverHeight + HEADER_HEIGHT;
   const [position, setPosition] = useState(() =>
-    computePopoverPosition(anchorRect, totalHeight, POPOVER_WIDTH),
+    computePopoverPosition(anchorRect, POPOVER_WIDTH, measuredHeight.current),
   );
 
   useLayoutEffect(() => {
-    if (hasBeenDragged.current) return;
-    setPosition(computePopoverPosition(anchorRect, totalHeight, POPOVER_WIDTH));
-  }, [anchorRect, totalHeight]);
+    if (popoverRef.current) {
+      measuredHeight.current = popoverRef.current.offsetHeight;
+    }
+    setPosition(computePopoverPosition(anchorRect, POPOVER_WIDTH, measuredHeight.current));
+  }, [anchorRect]);
 
   // Close on outside click
   useEffect(() => {
@@ -253,46 +248,12 @@ function PopoverPanel({ title, anchorRect, popoverHeight, onClose, children }: P
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleDragStart = useCallback((e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button')) return;
-    dragging.current = true;
-    hasBeenDragged.current = true;
-    const rect = popoverRef.current!.getBoundingClientRect();
-    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-  }, []);
-
-  const handleDragMove = useCallback((e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
-    setPosition({
-      top: Math.max(0, e.clientY - dragOffset.current.y),
-      left: Math.max(0, e.clientX - dragOffset.current.x),
-    });
-  }, []);
-
-  const handleDragEnd = useCallback((e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-  }, []);
-
   return (
     <div
       ref={popoverRef}
       class={styles.popover}
       style={{ top: position.top, left: position.left, width: POPOVER_WIDTH }}
     >
-      <div
-        class={styles.header}
-        onPointerDown={handleDragStart}
-        onPointerMove={handleDragMove}
-        onPointerUp={handleDragEnd}
-      >
-        <span class={styles.headerTitle}>{title}</span>
-        <button class={styles.closeButton} onClick={onClose} title="Close (Escape)">
-          <X size={10} />
-        </button>
-      </div>
       <div class={styles.body}>{children}</div>
     </div>
   );
@@ -664,7 +625,7 @@ interface ColorPickerProps {
 
 function ColorPicker({ hsva, mode, anchorRect, onChange, onModeChange, onCustomChange, onClose }: ColorPickerProps) {
   return (
-    <PopoverPanel title="Color" anchorRect={anchorRect} popoverHeight={400} onClose={onClose}>
+    <PopoverPanel anchorRect={anchorRect} onClose={onClose}>
       <ColorPickerCore
         hsva={hsva}
         mode={mode}

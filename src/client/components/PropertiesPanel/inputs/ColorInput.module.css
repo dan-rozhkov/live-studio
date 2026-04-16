@@ -2,8 +2,8 @@
 
 .popover {
   z-index: 10;
-  background: var(--cs-black, #141422);
-  border: 1px solid var(--cs-border, #ffffff1a);
+  background: var(--cs-layer);
+  border: 1px solid var(--cs-input-border);
   border-radius: 10px;
   flex-direction: column;
   display: flex;
@@ -13,7 +13,7 @@
 }
 
 .header {
-  border-bottom: 1px solid var(--cs-border, #ffffff1a);
+  border-bottom: 1px solid var(--cs-input-border);
   cursor: grab;
   user-select: none;
   flex-shrink: 0;
@@ -204,11 +204,11 @@
 .channelInput {
   background: var(--cs-input-bg);
   min-width: 0;
-  height: 28px;
+  height: 24px;
   color: var(--cs-foreground, #fff);
   font-family: var(--cs-font-mono, monospace);
   text-align: center;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 4px;
   outline: none;
   padding: 0 6px;
@@ -216,8 +216,13 @@
   box-sizing: border-box;
 }
 
+.channelInput:hover {
+  border-color: var(--cs-input-border);
+}
+
 .channelInput:focus {
-  background: var(--cs-input-bg-hover);
+  border-color: transparent;
+  border-bottom-color: var(--cs-accent);
 }
 
 .scrubbable:not(:focus) {
@@ -226,10 +231,10 @@
 
 .customInput {
   background: var(--cs-input-bg);
-  height: 28px;
+  height: 24px;
   color: var(--cs-foreground, #fff);
   font-family: var(--cs-font-mono, monospace);
-  border: none;
+  border: 1px solid transparent;
   border-radius: 4px;
   outline: none;
   grid-column: 1 / -1;
@@ -238,43 +243,50 @@
   box-sizing: border-box;
 }
 
+.customInput:hover {
+  border-color: var(--cs-input-border);
+}
+
 .customInput:focus {
-  background: var(--cs-input-bg-hover);
+  border-color: transparent;
+  border-bottom-color: var(--cs-accent);
 }
 
 /* Bottom row (mode select + eyedropper) */
 
 .bottomRow {
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  display: grid;
+  align-items: center;
+  gap: 4px;
+  display: flex;
 }
 
 .modeSelect {
   appearance: none;
-  background-color: var(--cs-input-bg);
+  background-color: var(--cs-layer);
   background-image: var(--cs-select-chevron);
-  height: 28px;
+  height: 24px;
   color: var(--cs-foreground, #fff);
+  font-family: var(--cs-font);
   cursor: pointer;
   background-position: right 6px center;
   background-repeat: no-repeat;
-  border: none;
+  border: 1px solid var(--cs-input-border);
   border-radius: 4px;
   outline: none;
-  grid-column: span 3;
-  padding: 0 22px 0 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 20px 2px 8px;
   font-size: 12px;
-  font-weight: 500;
 }
 
 .modeSelect:focus {
-  background-color: var(--cs-input-bg-hover);
+  border-color: var(--cs-accent);
 }
 
 .eyedropperButton {
-  background: var(--cs-input-bg);
-  height: 28px;
+  background: none;
+  width: 24px;
+  height: 24px;
   color: var(--cs-secondary-text);
   cursor: pointer;
   border: none;
@@ -285,8 +297,7 @@
 }
 
 .eyedropperButton:hover {
-  background: var(--cs-input-bg-hover);
-  color: var(--cs-secondary-text-hover);
+  color: var(--cs-foreground);
 }
 
 /* Swatch in row */

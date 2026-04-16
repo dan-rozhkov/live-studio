@@ -59,9 +59,15 @@ function VariableDropdown({ anchorRect, filter, onSelect, onClose }: VariableDro
     return typeFiltered.filter((t) => t.name.toLowerCase().includes(q) || t.value.toLowerCase().includes(q));
   }, [typeFiltered, search]);
 
-  // Position: below anchor, aligned right
-  const top = anchorRect.bottom + 4;
-  const left = Math.max(4, anchorRect.right - 240);
+  // Position: below anchor (flip above if not enough space), aligned right
+  const MAX_HEIGHT = 200;
+  const GAP = 4;
+  const spaceBelow = window.innerHeight - anchorRect.bottom - GAP;
+  const spaceAbove = anchorRect.top - GAP;
+  const top = spaceBelow >= MAX_HEIGHT || spaceBelow >= spaceAbove
+    ? anchorRect.bottom + GAP
+    : anchorRect.top - MAX_HEIGHT - GAP;
+  const left = Math.max(GAP, anchorRect.right - 240);
 
   // No autofocus — avoids scroll/layout disruption in the panel
 
