@@ -162,27 +162,6 @@ startStudio({
 
 The port can also be set via the `LIVE_STUDIO_PORT` environment variable.
 
-## Development
-
-To work on `live-studio` locally and see changes in a target project without publishing:
-
-```bash
-# in the live-studio directory (once)
-npm link
-
-# in your project
-npm link live-studio
-```
-
-Run `npm run dev` in live-studio for watch mode — changes will be picked up automatically.
-
-To switch back to the npm-published version:
-
-```bash
-npm unlink live-studio
-npm install live-studio
-```
-
 ## License
 
 MIT
