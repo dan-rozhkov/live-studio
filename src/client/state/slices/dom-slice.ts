@@ -27,6 +27,7 @@ export interface DomSlice {
   clearSelection: () => void;
   toggleNode: (nodeId: number) => void;
   expandToNode: (nodeId: number) => void;
+  setNodeAttribute: (nodeId: number, name: string, value: string | null) => void;
 }
 
 function findNodePath(tree: DomNode, targetId: number): number[] | null {
@@ -114,5 +115,25 @@ export const createDomSlice = (set: ImmerSet, _get: () => DomSlice): DomSlice =>
           state.expandedNodes[id] = true;
         }
       }
+    }),
+
+  setNodeAttribute: (nodeId, name, value) =>
+    set((state) => {
+      function visit(node: DomNode): boolean {
+        if (node.id === nodeId) {
+          if (value === null || value === '') {
+            if (node.attributes) delete node.attributes[name];
+          } else {
+            if (!node.attributes) node.attributes = {};
+            node.attributes[name] = value;
+          }
+          return true;
+        }
+        for (const child of node.children) {
+          if (visit(child)) return true;
+        }
+        return false;
+      }
+      if (state.domTree) visit(state.domTree);
     }),
 });

@@ -150,7 +150,7 @@ export function usePageBridge(): void {
       });
 
       if (document.body) {
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
       }
       observerRef.current = observer;
     }

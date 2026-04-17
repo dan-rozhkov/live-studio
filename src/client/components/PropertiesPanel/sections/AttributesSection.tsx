@@ -151,47 +151,9 @@ export function AttributesSection({
     valueRefs.current[id]?.focus();
   };
 
-  // Special class rendering
-  const classValue = attributes['class'] ?? '';
-  const classTokens = classValue.split(/\s+/).filter(Boolean);
-
   return (
     <>
-      {/* class attribute — show as space-separated tokens */}
-      {classTokens.length > 0 && (
-        <div class={styles.attrRow}>
-          <span class={styles.attrName} title="class">
-            class
-          </span>
-          <div class={styles.classTokens}>
-            {classTokens.map((token) => (
-              <span class={styles.classToken} key={token} title={token}>
-                {token}
-                <button
-                  class={styles.classTokenRemove}
-                  onClick={() => {
-                    const remaining = classTokens.filter((t) => t !== token);
-                    onAttributeChange('class', remaining.join(' '));
-                  }}
-                  title={`Remove class "${token}"`}
-                >
-                  x
-                </button>
-              </span>
-            ))}
-          </div>
-          <button
-            class={styles.deleteBtn}
-            onClick={() => onAttributeDelete('class')}
-            title="Delete class attribute"
-            style={{ opacity: 1 }}
-          >
-            <X size={10} />
-          </button>
-        </div>
-      )}
-
-      {/* Regular attributes (skip class — handled above) */}
+      {/* Regular attributes (class is rendered at the panel top) */}
       {attrEntries
         .filter(([name]) => name !== 'class')
         .map(([name, value]) => {

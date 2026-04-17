@@ -96,6 +96,49 @@
   pointer-events: none;
 }
 
+.classBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cs-border);
+  flex-shrink: 0;
+}
+
+.classToken {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 3px 1px 5px;
+  background: var(--cs-input-bg);
+  border: 1px solid var(--cs-input-border);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--cs-foreground);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classTokenRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+  padding: 0;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.classTokenRemove:hover {
+  color: var(--cs-foreground);
+}
+
 .sections {
   flex: 1;
   overflow-y: auto;

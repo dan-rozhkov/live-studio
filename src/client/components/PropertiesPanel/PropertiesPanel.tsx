@@ -1,6 +1,6 @@
 import { h, Fragment } from 'preact';
 import { useState, useCallback, useMemo, useRef } from 'preact/hooks';
-import { ChevronRight, ChevronDown, Undo2, Redo2, Sun, Moon, Clipboard, Check } from 'lucide-preact';
+import { ChevronRight, ChevronDown, Undo2, Redo2, Sun, Moon, Clipboard, Check, X } from 'lucide-preact';
 import { useStore } from '../../state/store';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { LayoutSection } from './sections/LayoutSection';
@@ -90,6 +90,7 @@ export function PropertiesPanel() {
   const parentDisplay = useStore((s) => s.parentDisplay);
   const queueEdit = useStore((s) => s.queueEdit);
   const updateProperty = useStore((s) => s.updateProperty);
+  const setNodeAttribute = useStore((s) => s.setNodeAttribute);
   const stagedChanges = useStore((s) => s.stagedChanges);
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
@@ -190,6 +191,7 @@ export function PropertiesPanel() {
       if (selectedNodeId !== null) {
         const el = getElementById(selectedNodeId);
         if (el) el.setAttribute(name, newValue);
+        setNodeAttribute(selectedNodeId, name, newValue);
       }
 
       // Queue edit for MCP
@@ -200,7 +202,7 @@ export function PropertiesPanel() {
         value: `${oldValue} \u2192 ${newValue}`,
       });
     },
-    [selectedNode, selectedNodeId, selector, queueEdit],
+    [selectedNode, selectedNodeId, selector, queueEdit, setNodeAttribute],
   );
 
   const handleAttributeDelete = useCallback(
@@ -216,6 +218,7 @@ export function PropertiesPanel() {
         });
         // Remove from live DOM
         if (el) el.removeAttribute(name);
+        setNodeAttribute(selectedNodeId, name, null);
       }
 
       // Queue edit for MCP
@@ -226,7 +229,7 @@ export function PropertiesPanel() {
         value: '',
       });
     },
-    [selectedNodeId, selector, queueEdit],
+    [selectedNodeId, selector, queueEdit, setNodeAttribute],
   );
 
   const handleAttributeRename = useCallback(
@@ -245,6 +248,8 @@ export function PropertiesPanel() {
           el.removeAttribute(oldName);
           el.setAttribute(newName, value);
         }
+        setNodeAttribute(selectedNodeId, oldName, null);
+        setNodeAttribute(selectedNodeId, newName, value);
       }
 
       // Queue delete of old + set of new
@@ -261,7 +266,7 @@ export function PropertiesPanel() {
         value,
       });
     },
-    [selectedNode, selectedNodeId, selector, queueEdit],
+    [selectedNode, selectedNodeId, selector, queueEdit, setNodeAttribute],
   );
 
   if (selectedNodeId === null || !selectedNode) {
@@ -315,6 +320,30 @@ export function PropertiesPanel() {
           </button>
         </div>
       </div>
+      {(() => {
+        const classValue = selectedNode.attributes?.class ?? '';
+        const classTokens = classValue.split(/\s+/).filter(Boolean);
+        if (classTokens.length === 0) return null;
+        return (
+          <div class={styles.classBar}>
+            {classTokens.map((token) => (
+              <span class={styles.classToken} key={token} title={token}>
+                {token}
+                <button
+                  class={styles.classTokenRemove}
+                  onClick={() => {
+                    const remaining = classTokens.filter((t) => t !== token);
+                    handleAttributeChange('class', remaining.join(' '));
+                  }}
+                  title={`Remove class "${token}"`}
+                >
+                  <X size={9} />
+                </button>
+              </span>
+            ))}
+          </div>
+        );
+      })()}
       <div class={styles.sections}>
         <Section title="Layout">
           <LayoutSection
