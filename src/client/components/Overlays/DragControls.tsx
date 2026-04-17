@@ -15,6 +15,7 @@
 
 import { useEffect, useRef } from 'preact/hooks';
 import { useStore } from '../../state/store';
+import { useUndoStore, type UndoOp } from '../../hooks/use-undo';
 import { getElementById } from '../../bridge/dom-bridge';
 import { refreshIfSelected } from '../../utils/select-node';
 import type { DomNode } from '../../state/slices/dom-slice';
@@ -111,6 +112,7 @@ interface Indicator {
 
 interface DragTarget {
   el: Element;
+  nodeId: number;
   selector: string;
   initialValues: Record<string, string>;
 }
@@ -393,7 +395,7 @@ export function DragControls() {
 
     // Track initial computed values for change detection
     const initialValues: Record<string, string> = {};
-    dragTargetRef.current = { el, selector, initialValues };
+    dragTargetRef.current = { el, nodeId: selectedNodeId, selector, initialValues };
 
     // ---- Margin setup ----
     setupMarginIndicators(el);
@@ -967,8 +969,10 @@ export function DragControls() {
 
         // Queue edits for changed spacing values.
         if (activeTarget?.selector && activeTarget.el.isConnected) {
-          const { el, selector, initialValues } = activeTarget;
+          const { el, nodeId, selector, initialValues } = activeTarget;
           const cs = getComputedStyle(el);
+          const undoOps: UndoOp[] = [];
+
           const prop = `${propertyBase}-${side}`;
           const newVal = cs.getPropertyValue(prop);
           const oldVal = initialValues[prop] || '0px';
@@ -979,6 +983,7 @@ export function DragControls() {
               name: prop,
               value: `${oldVal} \u2192 ${newVal}`,
             });
+            undoOps.push({ type: 'style', nodeId, property: prop, oldValue: oldVal, newValue: newVal });
             initialValues[prop] = newVal;
           }
 
@@ -992,8 +997,13 @@ export function DragControls() {
               name: oppProp,
               value: `${oldOppVal} \u2192 ${newOppVal}`,
             });
+            undoOps.push({ type: 'style', nodeId, property: oppProp, oldValue: oldOppVal, newValue: newOppVal });
             initialValues[oppProp] = newOppVal;
           }
+
+          if (undoOps.length === 1) useUndoStore.getState().push(undoOps[0]);
+          else if (undoOps.length > 1) useUndoStore.getState().pushBatch(undoOps);
+
           refreshIfSelected(useStore.getState().selectedNodeId);
         }
         activeTarget = null;
@@ -1088,7 +1098,7 @@ export function DragControls() {
 
         // Queue edit
         if (activeTarget?.selector && activeTarget.el.isConnected) {
-          const { el, selector, initialValues } = activeTarget;
+          const { el, nodeId, selector, initialValues } = activeTarget;
           const newVal = (el as HTMLElement).style.gap || getComputedStyle(el).gap;
           const oldVal = initialValues['gap'] || '0px';
           if (newVal !== oldVal) {
@@ -1097,6 +1107,13 @@ export function DragControls() {
               element: selector,
               name: 'gap',
               value: `${oldVal} \u2192 ${newVal}`,
+            });
+            useUndoStore.getState().push({
+              type: 'style',
+              nodeId,
+              property: 'gap',
+              oldValue: oldVal,
+              newValue: newVal,
             });
             initialValues['gap'] = newVal;
           }
@@ -1172,7 +1189,7 @@ export function DragControls() {
 
         // Queue edit
         if (activeTarget?.selector && activeTarget.el.isConnected) {
-          const { el, selector, initialValues } = activeTarget;
+          const { el, nodeId, selector, initialValues } = activeTarget;
           const newVal = (el as HTMLElement).style.borderRadius || getComputedStyle(el).borderRadius;
           const oldVal = initialValues['border-radius'] || '0px';
           if (newVal !== oldVal) {
@@ -1181,6 +1198,13 @@ export function DragControls() {
               element: selector,
               name: 'border-radius',
               value: `${oldVal} \u2192 ${newVal}`,
+            });
+            useUndoStore.getState().push({
+              type: 'style',
+              nodeId,
+              property: 'border-radius',
+              oldValue: oldVal,
+              newValue: newVal,
             });
             initialValues['border-radius'] = newVal;
           }
