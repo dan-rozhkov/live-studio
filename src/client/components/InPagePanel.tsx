@@ -18,6 +18,7 @@ import { useElementPicker } from '../hooks/use-element-picker';
 import { useMcpDirect } from '../hooks/use-mcp-direct';
 import { useInlineEdit } from '../hooks/use-inline-edit';
 import { useKeyboard } from '../hooks/use-keyboard';
+import { useScreenshot } from '../hooks/use-screenshot';
 import { useSelectedClickGuard } from '../hooks/use-selected-click-guard';
 import { useUndoStore } from '../hooks/use-undo';
 import { applyUndoEntry } from '../hooks/use-apply-undo';
@@ -104,6 +105,8 @@ export function InPagePanel() {
 
   useInlineEdit(handleInlineEditComplete, handleSelectNode);
 
+  const takeScreenshot = useScreenshot();
+
   // Keyboard shortcuts
   useKeyboard({
     applyEntry: applyUndoEntry,
@@ -111,6 +114,7 @@ export function InPagePanel() {
     handleSelectNode,
     deleteElement: domOps.deleteElement,
     duplicateElement: domOps.duplicateElement,
+    takeScreenshot,
   });
 
   // ── 2. Store subscriptions ───────────────────────────────────────────
@@ -130,8 +134,16 @@ export function InPagePanel() {
   const navigatorOpen = useStore((s) => s.panels.navigator.open);
   const navigatorTab = useStore((s) => s.panels.navigator.activeTab);
   const inspectorOpen = useStore((s) => s.panels.inspector.open);
+  const selectedNodeId = useStore((s) => s.selectedNodeId);
   const question = useStore((s) => s.question);
   const setHoveredNodeId = useStore((s) => s.setHoveredNodeId);
+
+  // Close the inspector panel when nothing is selected
+  useEffect(() => {
+    if (selectedNodeId === null && inspectorOpen) {
+      useStore.getState().setPanelOpen('inspector', false);
+    }
+  }, [selectedNodeId, inspectorOpen]);
 
   // ── 3. Panel callbacks ──────────────────────────────────────────────
 
@@ -177,6 +189,7 @@ export function InPagePanel() {
         isPicking={isPickingElement}
         onTogglePicker={togglePicker}
         onSendEdit={sendEdit}
+        onScreenshot={takeScreenshot}
       />
 
       {/* Overlays + DragControls — always rendered, self-manage visibility */}
