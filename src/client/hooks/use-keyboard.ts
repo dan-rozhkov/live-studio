@@ -87,6 +87,8 @@ export interface UseKeyboardOptions {
   deleteElement?: (nodeId: number) => void;
   /** Duplicate a selected element by node ID. */
   duplicateElement?: (nodeId: number) => void;
+  /** Copy the selection (or a marquee region) as a PNG image. */
+  takeScreenshot?: () => void;
 }
 
 /**
@@ -108,7 +110,7 @@ export interface UseKeyboardOptions {
  * element is focused.
  */
 export function useKeyboard(opts: UseKeyboardOptions = {}): void {
-  const { applyEntry, sendEdit, handleSelectNode, deleteElement, duplicateElement } = opts;
+  const { applyEntry, sendEdit, handleSelectNode, deleteElement, duplicateElement, takeScreenshot } = opts;
 
   const clearSelection = useStore((s) => s.clearSelection);
   const setPickingElement = useStore((s) => s.setPickingElement);
@@ -193,6 +195,20 @@ export function useKeyboard(opts: UseKeyboardOptions = {}): void {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
+
+  // ── Cmd/Ctrl+Shift+S → screenshot to clipboard ──────────────────
+  useEffect(() => {
+    if (!takeScreenshot) return;
+    const handler = (e: KeyboardEvent) => {
+      if (isInputFocused()) return;
+      const isMod = e.metaKey || e.ctrlKey;
+      if (!isMod || !e.shiftKey || e.code !== 'KeyS') return;
+      e.preventDefault();
+      takeScreenshot();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [takeScreenshot]);
 
   // ── Cmd+Enter → send edit ────────────────────────────────────────
   useEffect(() => {

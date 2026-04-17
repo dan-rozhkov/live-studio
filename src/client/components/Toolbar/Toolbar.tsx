@@ -1,7 +1,7 @@
 import { h, Fragment } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { useStore } from '../../state/store';
-import { MousePointer, ArrowRight, Check, Bot, Code, Sun, Loader, ChevronsLeft, ChevronsRight, Copy } from 'lucide-preact';
+import { MousePointer, ArrowRight, Check, Bot, Code, Sun, Loader, ChevronsLeft, ChevronsRight, Copy, Camera } from 'lucide-preact';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { getElementById } from '../../bridge/dom-bridge';
 import { getVueTracerInfo } from '../../bridge/component-bridge';
@@ -84,9 +84,10 @@ export interface ToolbarProps {
   isPicking: boolean;
   onTogglePicker: () => void;
   onSendEdit: () => void;
+  onScreenshot: () => void;
 }
 
-export function Toolbar({ isPicking, onTogglePicker, onSendEdit }: ToolbarProps) {
+export function Toolbar({ isPicking, onTogglePicker, onSendEdit, onScreenshot }: ToolbarProps) {
   const mcpStatus = useStore((s) => s.mcpStatus);
   const agentPolling = useStore((s) => s.agentPolling);
   const autoApply = useStore((s) => s.autoApply);
@@ -105,6 +106,7 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit }: ToolbarProps)
   const [collapsed, toggleCollapsed] = useToolbarCollapsed();
   const [applied, setApplied] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shotCopied, setShotCopied] = useState(false);
   const wasApplyingRef = useRef(false);
 
   const isConnected = mcpStatus === 'connected';
@@ -173,6 +175,16 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit }: ToolbarProps)
     return () => window.removeEventListener('livestudio:copied', handler);
   }, []);
 
+  // Screenshot feedback
+  useEffect(() => {
+    const onCopied = () => {
+      setShotCopied(true);
+      setTimeout(() => setShotCopied(false), 1500);
+    };
+    window.addEventListener('livestudio:screenshot-copied', onCopied);
+    return () => window.removeEventListener('livestudio:screenshot-copied', onCopied);
+  }, []);
+
   // Alt+. shortcut to collapse/expand
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -208,6 +220,18 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit }: ToolbarProps)
             title="Copy element info"
           >
             {copied ? <Check size={16} /> : <Copy size={16} />}
+          </IconButton>
+
+          {/* Screenshot to clipboard */}
+          <IconButton
+            onClick={onScreenshot}
+            title={
+              selectedNodeId !== null
+                ? 'Copy selection as image (\u2318\u21E7S)'
+                : 'Copy zone as image \u2014 drag to select (\u2318\u21E7S)'
+            }
+          >
+            {shotCopied ? <Check size={16} /> : <Camera size={16} />}
           </IconButton>
 
           <div className={styles.separator} />
