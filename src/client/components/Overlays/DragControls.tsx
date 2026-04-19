@@ -28,6 +28,9 @@ const PADDING_COLOR = '#FF1493';  // Deep pink
 const GAP_COLOR = '#9747FF';      // Figma purple
 const RADIUS_COLOR = '#0D99FF';   // Selection blue
 const MARGIN_COLOR = '#0D99FF';   // Selection blue
+const RESIZE_COLOR = '#0D99FF';   // Selection blue
+const RESIZE_STRIP = 8;
+const RESIZE_SIGNS: Record<string, number> = { top: -1, bottom: 1, left: -1, right: 1 };
 
 const RADIUS_CORNERS = ['top-left', 'top-right', 'bottom-right', 'bottom-left'] as const;
 type RadiusCorner = typeof RADIUS_CORNERS[number];
@@ -232,6 +235,26 @@ function computeMarginPositions(el: Element, rect: DOMRect): BoxSpacingPosition[
   return positions;
 }
 
+interface ResizePosition {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  side: 'top' | 'right' | 'bottom' | 'left';
+}
+
+function computeResizePositions(rect: DOMRect): ResizePosition[] {
+  const w = rect.width;
+  const h = rect.height;
+  const s = RESIZE_STRIP;
+  return [
+    { top: -s / 2, left: 0, width: w, height: s, side: 'top' },
+    { top: h - s / 2, left: 0, width: w, height: s, side: 'bottom' },
+    { top: 0, left: -s / 2, width: s, height: h, side: 'left' },
+    { top: 0, left: w - s / 2, width: s, height: h, side: 'right' },
+  ];
+}
+
 function computePaddingPositions(el: Element, rect: DOMRect): BoxSpacingPosition[] {
   const cs = getComputedStyle(el);
   const pt = parseFloat(cs.paddingTop) || 0;
@@ -356,6 +379,7 @@ export function DragControls() {
   const marginIndicators = useRef<Indicator[]>([]);
   const paddingIndicators = useRef<Indicator[]>([]);
   const gapIndicators = useRef<Indicator[]>([]);
+  const resizeIndicators = useRef<Indicator[]>([]);
   const radiusHandle = useRef<{
     container: HTMLDivElement;
     handles: HTMLDivElement[];
@@ -365,6 +389,7 @@ export function DragControls() {
   const prevMarginKey = useRef('');
   const prevPaddingKey = useRef('');
   const prevGapKey = useRef('');
+  const prevResizeKey = useRef('');
   const dragTargetRef = useRef<DragTarget | null>(null);
 
   useEffect(() => {
@@ -409,6 +434,9 @@ export function DragControls() {
     // ---- Border-radius setup ----
     setupRadiusHandle(el);
 
+    // ---- Resize edge setup ----
+    setupResizeIndicators(el);
+
     // ---- Animation loop ----
     function tick() {
       if (!el!.isConnected) {
@@ -429,6 +457,9 @@ export function DragControls() {
 
       // Update border-radius handle
       updateRadiusPosition(el!, rect);
+
+      // Update resize edge strips
+      updateResizePositions(el!, rect);
 
       rafRef.current = requestAnimationFrame(tick);
     }
@@ -477,6 +508,31 @@ export function DragControls() {
       }
 
       syncMarginPositions(positions, rect);
+    }
+
+    function setupResizeIndicators(el: Element) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 50 || rect.height < 50) return;
+
+      const positions = computeResizePositions(rect);
+      prevResizeKey.current = serializeRects(positions);
+
+      while (resizeIndicators.current.length < positions.length) {
+        const ind = createIndicator('resize', RESIZE_COLOR);
+        ind.hitArea.style.top = '0';
+        ind.hitArea.style.left = '0';
+        ind.hitArea.style.transform = 'none';
+        ind.hitArea.style.width = '100%';
+        ind.hitArea.style.height = '100%';
+        ind.grip.style.display = 'none';
+        ind.label.style.display = 'none';
+        // Lower than spacing handles so margin/padding/gap hitAreas still win at edge centers.
+        ind.container.style.zIndex = '2147483640';
+        setupResizeDrag(ind);
+        resizeIndicators.current.push(ind);
+      }
+
+      syncResizePositions(positions, rect);
     }
 
     function setupGapIndicators(el: Element) {
@@ -811,6 +867,46 @@ export function DragControls() {
       }
     }
 
+    function syncResizePositions(positions: ResizePosition[], rect: DOMRect) {
+      for (let i = 0; i < positions.length; i++) {
+        const pos = positions[i];
+        const ind = resizeIndicators.current[i];
+        if (!ind) continue;
+
+        const s = ind.container.style;
+        s.display = 'block';
+        s.top = (rect.top + pos.top) + 'px';
+        s.left = (rect.left + pos.left) + 'px';
+        s.width = pos.width + 'px';
+        s.height = pos.height + 'px';
+
+        const isV = pos.side === 'top' || pos.side === 'bottom';
+        ind.hitArea.style.cursor = isV ? 'ns-resize' : 'ew-resize';
+        (ind.hitArea as any).dataset.side = pos.side;
+      }
+    }
+
+    function updateResizePositions(el: Element, rect: DOMRect) {
+      if (rect.width < 50 || rect.height < 50) {
+        for (const ind of resizeIndicators.current) ind.container.style.display = 'none';
+        return;
+      }
+      const positions = computeResizePositions(rect);
+      const key = serializeRects(positions);
+      if (key !== prevResizeKey.current) {
+        prevResizeKey.current = key;
+        syncResizePositions(positions, rect);
+      } else {
+        for (let i = 0; i < positions.length; i++) {
+          const pos = positions[i];
+          const ind = resizeIndicators.current[i];
+          if (!ind) continue;
+          ind.container.style.top = (rect.top + pos.top) + 'px';
+          ind.container.style.left = (rect.left + pos.left) + 'px';
+        }
+      }
+    }
+
     function updateRadiusPosition(el: Element, rect: DOMRect) {
       if (!radiusHandle.current) return;
       if (!canShowRadiusHandle(el, rect)) {
@@ -1125,6 +1221,82 @@ export function DragControls() {
       ind.hitArea.addEventListener('pointerdown', onDown as EventListener);
     }
 
+    // ---- Drag setup for resize (width/height) ----
+    function setupResizeDrag(ind: Indicator) {
+      let startX = 0;
+      let startY = 0;
+      let startVal = 0;
+      let side: 'top' | 'right' | 'bottom' | 'left' = 'top';
+      let prop: 'width' | 'height' = 'width';
+      let activeTarget: DragTarget | null = null;
+
+      function onDown(e: PointerEvent) {
+        e.stopPropagation();
+        e.preventDefault();
+        activeTarget = dragTargetRef.current;
+        if (!activeTarget?.el.isConnected) return;
+
+        side = ((ind.hitArea as any).dataset.side || 'top') as typeof side;
+        const isV = side === 'top' || side === 'bottom';
+        prop = isV ? 'height' : 'width';
+        startX = e.clientX;
+        startY = e.clientY;
+        const { el, initialValues } = activeTarget;
+        const rect = el.getBoundingClientRect();
+        startVal = isV ? rect.height : rect.width;
+
+        if (!(prop in initialValues)) {
+          initialValues[prop] = getComputedStyle(el).getPropertyValue(prop);
+        }
+
+        startDrag(ind.hitArea, ind.line, ind.label, ind.grip, e, isV ? 'ns-resize' : 'ew-resize');
+
+        ind.hitArea.addEventListener('pointermove', onMove as EventListener);
+        ind.hitArea.addEventListener('pointerup', onUp as EventListener);
+        ind.hitArea.addEventListener('lostpointercapture', onUp as EventListener);
+      }
+
+      function onMove(e: PointerEvent) {
+        if (!activeTarget?.el.isConnected) return;
+        const isV = side === 'top' || side === 'bottom';
+        const sign = RESIZE_SIGNS[side];
+        const delta = isV ? (e.clientY - startY) : (e.clientX - startX);
+        const next = Math.max(1, Math.round(startVal + delta * sign));
+        (activeTarget.el as HTMLElement).style.setProperty(prop, next + 'px');
+      }
+
+      function onUp(e: PointerEvent) {
+        endDrag(ind.hitArea, ind.line, ind.label, ind.grip, e, onMove as any, onUp as any);
+
+        if (activeTarget?.selector && activeTarget.el.isConnected) {
+          const { el, nodeId, selector, initialValues } = activeTarget;
+          const cs = getComputedStyle(el);
+          const newVal = cs.getPropertyValue(prop);
+          const oldVal = initialValues[prop] ?? '';
+          if (newVal !== oldVal) {
+            useStore.getState().queueEdit({
+              type: 'style',
+              element: selector,
+              name: prop,
+              value: `${oldVal} \u2192 ${newVal}`,
+            });
+            useUndoStore.getState().push({
+              type: 'style',
+              nodeId,
+              property: prop,
+              oldValue: oldVal,
+              newValue: newVal,
+            });
+            initialValues[prop] = newVal;
+          }
+          refreshIfSelected(useStore.getState().selectedNodeId);
+        }
+        activeTarget = null;
+      }
+
+      ind.hitArea.addEventListener('pointerdown', onDown as EventListener);
+    }
+
     // ---- Drag setup for border-radius ----
     function setupRadiusDrag() {
       const rh = radiusHandle.current;
@@ -1224,11 +1396,12 @@ export function DragControls() {
       for (const ind of marginIndicators.current) ind.container.style.display = 'none';
       for (const ind of paddingIndicators.current) ind.container.style.display = 'none';
       for (const ind of gapIndicators.current) ind.container.style.display = 'none';
+      for (const ind of resizeIndicators.current) ind.container.style.display = 'none';
       if (radiusHandle.current) radiusHandle.current.container.style.display = 'none';
     }
 
     function resetVisualState() {
-      for (const ind of [...marginIndicators.current, ...paddingIndicators.current, ...gapIndicators.current]) {
+      for (const ind of [...marginIndicators.current, ...paddingIndicators.current, ...gapIndicators.current, ...resizeIndicators.current]) {
         delete (ind.hitArea as any).dataset.dragging;
         ind.line.style.opacity = '0';
         ind.label.style.opacity = '0';
@@ -1257,6 +1430,8 @@ export function DragControls() {
       paddingIndicators.current = [];
       for (const ind of gapIndicators.current) ind.container.remove();
       gapIndicators.current = [];
+      for (const ind of resizeIndicators.current) ind.container.remove();
+      resizeIndicators.current = [];
       if (radiusHandle.current) {
         radiusHandle.current.container.remove();
         radiusHandle.current = null;
