@@ -1,6 +1,6 @@
 {
   "name": "live-studio",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Open-source visual CSS editor with MCP for AI agents",
   "type": "module",
   "module": "dist/live-studio.mjs",
