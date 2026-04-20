@@ -80,6 +80,54 @@ function Section({ title, defaultOpen = true, collapsible = true, actions, child
 }
 
 // ---------------------------------------------------------------------------
+// ClassBar — shows class tokens with truncation + expand/collapse
+// ---------------------------------------------------------------------------
+
+const CLASS_COLLAPSED_COUNT = 3;
+
+interface ClassBarProps {
+  classValue: string;
+  onChange: (nextValue: string) => void;
+}
+
+function ClassBar({ classValue, onChange }: ClassBarProps) {
+  const [expanded, setExpanded] = useState(false);
+  const tokens = classValue.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return null;
+
+  const visible =
+    expanded || tokens.length <= CLASS_COLLAPSED_COUNT
+      ? tokens
+      : tokens.slice(0, CLASS_COLLAPSED_COUNT);
+  const hidden = tokens.length - visible.length;
+
+  return (
+    <div class={styles.classBar}>
+      {visible.map((token) => (
+        <span class={styles.classToken} key={token} title={token}>
+          {token}
+          <button
+            class={styles.classTokenRemove}
+            onClick={() => onChange(tokens.filter((t) => t !== token).join(' '))}
+            title={`Remove class "${token}"`}
+          >
+            <X size={9} />
+          </button>
+        </span>
+      ))}
+      {tokens.length > CLASS_COLLAPSED_COUNT && (
+        <button
+          class={styles.classToggle}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? 'Less' : `+${hidden} More`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // PropertiesPanel
 // ---------------------------------------------------------------------------
 
@@ -320,30 +368,12 @@ export function PropertiesPanel() {
           </button>
         </div>
       </div>
-      {(() => {
-        const classValue = selectedNode.attributes?.class ?? '';
-        const classTokens = classValue.split(/\s+/).filter(Boolean);
-        if (classTokens.length === 0) return null;
-        return (
-          <div class={styles.classBar}>
-            {classTokens.map((token) => (
-              <span class={styles.classToken} key={token} title={token}>
-                {token}
-                <button
-                  class={styles.classTokenRemove}
-                  onClick={() => {
-                    const remaining = classTokens.filter((t) => t !== token);
-                    handleAttributeChange('class', remaining.join(' '));
-                  }}
-                  title={`Remove class "${token}"`}
-                >
-                  <X size={9} />
-                </button>
-              </span>
-            ))}
-          </div>
-        );
-      })()}
+      <ClassBar
+        key={selectedNodeId}
+        classValue={selectedNode.attributes?.class ?? ''}
+        onChange={(next) => handleAttributeChange('class', next)}
+      />
+
       <div class={styles.sections}>
         <Section title="Layout">
           <LayoutSection

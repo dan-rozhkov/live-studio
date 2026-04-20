@@ -1,10 +1,10 @@
 import { h, Fragment } from 'preact';
-import { useState, useCallback, useEffect, useRef, useMemo } from 'preact/hooks';
+import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { X } from 'lucide-preact';
 import inputStyles from './inputs.module.css';
 import styles from './GradientInput.module.css';
-import { ColorPickerCore, parseCssColor, hsvaToRgba, hsvaToHex, type HSVA, type ColorMode } from './ColorInput';
+import { ColorPickerCore, PopoverPanel, parseCssColor, hsvaToRgba, hsvaToHex, type HSVA, type ColorMode } from './ColorInput';
 
 /* ══════════════════════════════════════════════════════════════
    Gradient config types
@@ -658,6 +658,15 @@ export function GradientPicker({ config, onChange }: GradientPickerProps) {
         <div class={styles.controlRow}>
           <span class={styles.controlLabel}>Angle</span>
           <input
+            class={inputStyles.slider}
+            type="range"
+            min={0}
+            max={360}
+            step={1}
+            value={Math.round(config.angle)}
+            onInput={handleAngleChange}
+          />
+          <input
             class={styles.angleInput}
             type="number"
             min={0}
@@ -665,7 +674,7 @@ export function GradientPicker({ config, onChange }: GradientPickerProps) {
             value={Math.round(config.angle)}
             onInput={handleAngleChange}
           />
-          <span style={{ color: 'var(--cs-secondary-text)', fontSize: '11px' }}>deg</span>
+          <span style={{ color: 'var(--cs-secondary-text)', fontSize: '11px' }}>°</span>
         </div>
       )}
 
@@ -708,26 +717,6 @@ export function GradientPicker({ config, onChange }: GradientPickerProps) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Popover positioning (reused from ColorInput pattern)
-   ══════════════════════════════════════════════════════════════ */
-
-function computePopoverPosition(
-  anchorRect: DOMRect,
-  popoverHeight: number,
-  popoverWidth: number,
-) {
-  const MARGIN = 4;
-  let top = anchorRect.bottom + 6;
-  if (top + popoverHeight > window.innerHeight) {
-    top = anchorRect.top - popoverHeight - 6;
-  }
-  let left = anchorRect.left;
-  top = Math.max(MARGIN, Math.min(top, window.innerHeight - popoverHeight - MARGIN));
-  left = Math.max(MARGIN, Math.min(left, window.innerWidth - popoverWidth - MARGIN));
-  return { top, left };
-}
-
-/* ══════════════════════════════════════════════════════════════
    GradientInput — main exported component (swatch + text + picker)
    ══════════════════════════════════════════════════════════════ */
 
@@ -755,7 +744,7 @@ export function GradientInput({
   const [localText, setLocalText] = useState(value);
   const isEditingRef = useRef(false);
   const swatchRef = useRef<HTMLButtonElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const anchorRectRef = useRef<DOMRect | null>(null);
 
   // Sync from external value
   useEffect(() => {
@@ -807,6 +796,9 @@ export function GradientInput({
   );
 
   const handleSwatchClick = useCallback(() => {
+    if (swatchRef.current) {
+      anchorRectRef.current = swatchRef.current.getBoundingClientRect();
+    }
     setPickerOpen((prev) => !prev);
     onFocus?.();
   }, [onFocus]);
@@ -816,40 +808,7 @@ export function GradientInput({
     isEditingRef.current = false;
   }, []);
 
-  // Close on outside click
-  useEffect(() => {
-    if (!pickerOpen) return;
-    const handlePointerDown = (e: PointerEvent) => {
-      const target = e.composedPath()[0] as Node | null;
-      if (!target) return;
-      if (popoverRef.current?.contains(target)) return;
-      if (swatchRef.current?.contains(target)) return;
-      handleClose();
-    };
-    const root = popoverRef.current?.getRootNode() as Document ?? document;
-    root.addEventListener('pointerdown', handlePointerDown as any);
-    return () => root.removeEventListener('pointerdown', handlePointerDown as any);
-  }, [pickerOpen, handleClose]);
-
-  // Close on Escape
-  useEffect(() => {
-    if (!pickerOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); handleClose(); }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [pickerOpen, handleClose]);
-
-  // Popover position
-  const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
-  useEffect(() => {
-    if (!pickerOpen || !swatchRef.current) return;
-    const rect = swatchRef.current.getBoundingClientRect();
-    setPopoverPos(computePopoverPosition(rect, 400, 260));
-  }, [pickerOpen]);
-
-  const displayLabel = displayName || label;
+  const displayLabel = displayName !== undefined ? displayName : label;
   const previewCss = isGradientValue(value) ? value : serializeGradient(config);
 
   return (
@@ -873,50 +832,10 @@ export function GradientInput({
           onFocus={handleTextFocus}
         />
       </div>
-      {pickerOpen && (
-        <div
-          ref={popoverRef}
-          style={{
-            position: 'fixed',
-            top: popoverPos.top,
-            left: popoverPos.left,
-            width: 260,
-            zIndex: 10,
-            background: 'var(--cs-black, #141422)',
-            border: '1px solid var(--cs-border, #ffffff1a)',
-            borderRadius: '10px',
-            boxShadow: '0 8px 32px #00000080',
-            overflow: 'hidden',
-          }}
-        >
-          <div style={{
-            borderBottom: '1px solid var(--cs-border, #ffffff1a)',
-            cursor: 'grab',
-            userSelect: 'none',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '6px 6px 6px 10px',
-          }}>
-            <span style={{ color: 'var(--cs-feint-text)', fontSize: '11px', fontWeight: 500, letterSpacing: '0.02em' }}>
-              Gradient
-            </span>
-            <button
-              onClick={handleClose}
-              title="Close (Escape)"
-              style={{
-                width: '20px', height: '20px', color: 'var(--cs-feint-text)',
-                cursor: 'pointer', background: 'none', border: 'none', borderRadius: '4px',
-                display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0,
-              }}
-            >
-              <X size={10} />
-            </button>
-          </div>
-          <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <GradientPicker config={config} onChange={handleConfigChange} />
-          </div>
-        </div>
+      {pickerOpen && anchorRectRef.current && (
+        <PopoverPanel anchorRect={anchorRectRef.current} onClose={handleClose}>
+          <GradientPicker config={config} onChange={handleConfigChange} />
+        </PopoverPanel>
       )}
     </div>
   );

@@ -139,6 +139,22 @@
   color: var(--cs-foreground);
 }
 
+.classToggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  background: transparent;
+  border: 1px solid var(--cs-input-border);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--cs-feint-text);
+  cursor: pointer;
+}
+
+.classToggle:hover {
+  color: var(--cs-foreground);
+}
+
 .sections {
   flex: 1;
   overflow-y: auto;

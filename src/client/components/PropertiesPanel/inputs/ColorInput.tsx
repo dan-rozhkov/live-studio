@@ -205,26 +205,27 @@ const supportsEyeDropper = typeof window !== 'undefined' && 'EyeDropper' in wind
 
 const POPOVER_WIDTH = 240;
 
-interface PopoverPanelProps {
+export interface PopoverPanelProps {
   anchorRect: DOMRect;
   onClose: () => void;
   children: any;
+  width?: number;
 }
 
-function PopoverPanel({ anchorRect, onClose, children }: PopoverPanelProps) {
+export function PopoverPanel({ anchorRect, onClose, children, width = POPOVER_WIDTH }: PopoverPanelProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const measuredHeight = useRef(0);
 
   const [position, setPosition] = useState(() =>
-    computePopoverPosition(anchorRect, POPOVER_WIDTH, measuredHeight.current),
+    computePopoverPosition(anchorRect, width, measuredHeight.current),
   );
 
   useLayoutEffect(() => {
     if (popoverRef.current) {
       measuredHeight.current = popoverRef.current.offsetHeight;
     }
-    setPosition(computePopoverPosition(anchorRect, POPOVER_WIDTH, measuredHeight.current));
-  }, [anchorRect]);
+    setPosition(computePopoverPosition(anchorRect, width, measuredHeight.current));
+  }, [anchorRect, width]);
 
   // Close on outside click
   useEffect(() => {
@@ -252,7 +253,7 @@ function PopoverPanel({ anchorRect, onClose, children }: PopoverPanelProps) {
     <div
       ref={popoverRef}
       class={styles.popover}
-      style={{ top: position.top, left: position.left, width: POPOVER_WIDTH }}
+      style={{ top: position.top, left: position.left, width }}
     >
       <div class={styles.body}>{children}</div>
     </div>
