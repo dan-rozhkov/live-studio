@@ -18,37 +18,6 @@
   box-shadow: var(--ls-shadow-lg);
 }
 
-.toolbarCollapsed {
-  border-radius: 8px;
-  gap: 0;
-  padding: 4px 2px;
-}
-
-.collapseToggle {
-  width: 20px;
-  height: 28px;
-  color: var(--cs-feint-text, #fff6);
-  cursor: pointer;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  flex-shrink: 0;
-  justify-content: center;
-  align-items: center;
-  padding: 0;
-  transition: color 0.1s, background 0.1s;
-  display: flex;
-}
-
-.collapseToggle:hover {
-  color: var(--cs-foreground);
-  background: var(--cs-feint);
-}
-
-.collapseToggle:focus {
-  outline: none;
-}
-
 .toolbarButton {
   width: 28px;
   height: 28px;
@@ -129,6 +98,7 @@
 .agentStatus {
   align-items: center;
   gap: 2px;
+  padding-right: 4px;
   display: flex;
   position: relative;
 }

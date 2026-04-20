@@ -1,11 +1,12 @@
-import { h, Fragment } from 'preact';
+import { h } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { useStore } from '../../state/store';
-import { MousePointer, ArrowRight, Check, Bot, Code, Sun, Loader, ChevronsLeft, ChevronsRight, Copy, Camera } from 'lucide-preact';
+import { MousePointer, ArrowRight, Check, Bot, Code, Sun, Loader, Copy, Camera } from 'lucide-preact';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { getElementById } from '../../bridge/dom-bridge';
 import { getVueTracerInfo } from '../../bridge/component-bridge';
 import { findAncestorChain } from '../../utils/dom-tree';
+import { DockHandle } from '../Panel/PanelDocking';
 import styles from './Toolbar.module.css';
 
 /* ------------------------------------------------------------------ */
@@ -39,31 +40,56 @@ function IconButton({ active, muted, mode, disabled, onClick, title, children }:
 }
 
 /* ------------------------------------------------------------------ */
-/*  Toolbar collapse                                                   */
+/*  Toolbar position (drag)                                            */
 /* ------------------------------------------------------------------ */
 
-const COLLAPSED_KEY = 'livestudio-toolbar-collapsed';
+const POSITION_KEY = 'livestudio-toolbar-position';
+const EDGE_MARGIN = 8;
 
-function useToolbarCollapsed(): [boolean, () => void] {
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(COLLAPSED_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-  const toggle = useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
-      } catch {
-        /* noop */
-      }
-      return next;
-    });
-  }, []);
-  return [collapsed, toggle];
+interface ToolbarPosition {
+  top: number;
+  left: number;
+}
+
+function loadPosition(): ToolbarPosition | null {
+  try {
+    const raw = localStorage.getItem(POSITION_KEY);
+    return raw ? (JSON.parse(raw) as ToolbarPosition) : null;
+  } catch {
+    return null;
+  }
+}
+
+function savePosition(pos: ToolbarPosition): void {
+  try {
+    localStorage.setItem(POSITION_KEY, JSON.stringify(pos));
+  } catch {
+    /* noop */
+  }
+}
+
+interface ClampBounds {
+  w: number;
+  h: number;
+  vw: number;
+  vh: number;
+}
+
+function measureBounds(el: HTMLElement | null): ClampBounds {
+  const rect = el?.getBoundingClientRect();
+  return {
+    w: rect?.width ?? 0,
+    h: rect?.height ?? 0,
+    vw: document.documentElement.clientWidth,
+    vh: document.documentElement.clientHeight,
+  };
+}
+
+function clampPosition(pos: ToolbarPosition, b: ClampBounds): ToolbarPosition {
+  return {
+    left: Math.max(EDGE_MARGIN, Math.min(pos.left, b.vw - b.w - EDGE_MARGIN)),
+    top: Math.max(EDGE_MARGIN, Math.min(pos.top, b.vh - b.h - EDGE_MARGIN)),
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -103,11 +129,16 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit, onScreenshot }:
   const selectedNodeId = useStore((s) => s.selectedNodeId);
   const domTree = useStore((s) => s.domTree);
 
-  const [collapsed, toggleCollapsed] = useToolbarCollapsed();
   const [applied, setApplied] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shotCopied, setShotCopied] = useState(false);
   const wasApplyingRef = useRef(false);
+
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<ToolbarPosition | null>(() => loadPosition());
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const dragBounds = useRef({ w: 0, h: 0, vw: 0, vh: 0 });
+  const dragging = useRef(false);
 
   const isConnected = mcpStatus === 'connected';
   const isAgentActive = isConnected && agentPolling;
@@ -185,121 +216,150 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit, onScreenshot }:
     return () => window.removeEventListener('livestudio:screenshot-copied', onCopied);
   }, []);
 
-  // Alt+. shortcut to collapse/expand
+  const isPositioned = position !== null;
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!e.altKey || e.metaKey || e.ctrlKey) return;
-      if (e.code === 'Period') {
-        e.preventDefault();
-        toggleCollapsed();
-      }
+    if (!isPositioned) return;
+    const onResize = () => {
+      setPosition((prev) => (prev ? clampPosition(prev, measureBounds(toolbarRef.current)) : prev));
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [toggleCollapsed]);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [isPositioned]);
 
-  const toolbarCls = `${styles.toolbar} ${collapsed ? styles.toolbarCollapsed : ''}`;
+  const handleDragStart = useCallback((e: PointerEvent) => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragging.current = true;
+    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    dragBounds.current = {
+      w: rect.width,
+      h: rect.height,
+      vw: document.documentElement.clientWidth,
+      vh: document.documentElement.clientHeight,
+    };
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }, []);
+
+  const handleDragMove = useCallback((e: PointerEvent) => {
+    if (!dragging.current) return;
+    const next = clampPosition(
+      { left: e.clientX - dragOffset.current.x, top: e.clientY - dragOffset.current.y },
+      dragBounds.current,
+    );
+    setPosition(next);
+  }, []);
+
+  const handleDragEnd = useCallback((e: PointerEvent) => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    (e.currentTarget as Element).releasePointerCapture(e.pointerId);
+    setPosition((prev) => {
+      if (!prev) return prev;
+      savePosition(prev);
+      return prev;
+    });
+  }, []);
+
+  const positionStyle = position
+    ? { top: position.top, left: position.left, bottom: 'auto', transform: 'none' }
+    : undefined;
 
   return (
-    <div data-ls-toolbar className={toolbarCls}>
-      {!collapsed && (
-        <Fragment>
-          {/* Picker toggle */}
-          <IconButton
-            active={isPicking}
-            onClick={onTogglePicker}
-            title="Select element (\u2325C)"
-          >
-            <MousePointer size={16} />
-          </IconButton>
+    <div
+      ref={toolbarRef}
+      data-ls-toolbar
+      className={styles.toolbar}
+      style={positionStyle}
+    >
+      <div
+        onPointerDown={handleDragStart}
+        onPointerMove={handleDragMove}
+        onPointerUp={handleDragEnd}
+      >
+        <DockHandle />
+      </div>
 
-          {/* Copy element info */}
-          <IconButton
-            disabled={selectedNodeId === null}
-            onClick={handleCopyElementInfo}
-            title="Copy element info"
-          >
-            {copied ? <Check size={16} /> : <Copy size={16} />}
-          </IconButton>
+      <IconButton
+        active={isPicking}
+        onClick={onTogglePicker}
+        title="Select element (\u2325C)"
+      >
+        <MousePointer size={16} />
+      </IconButton>
 
-          {/* Screenshot to clipboard */}
-          <IconButton
-            onClick={onScreenshot}
-            title={
-              selectedNodeId !== null
-                ? 'Copy selection as image (\u2318\u21E7S)'
-                : 'Copy zone as image \u2014 drag to select (\u2318\u21E7S)'
-            }
-          >
-            {shotCopied ? <Check size={16} /> : <Camera size={16} />}
-          </IconButton>
+      <IconButton
+        disabled={selectedNodeId === null}
+        onClick={handleCopyElementInfo}
+        title="Copy element info"
+      >
+        {copied ? <Check size={16} /> : <Copy size={16} />}
+      </IconButton>
 
-          <div className={styles.separator} />
+      <IconButton
+        onClick={onScreenshot}
+        title={
+          selectedNodeId !== null
+            ? 'Copy selection as image (\u2318\u21E7S)'
+            : 'Copy zone as image \u2014 drag to select (\u2318\u21E7S)'
+        }
+      >
+        {shotCopied ? <Check size={16} /> : <Camera size={16} />}
+      </IconButton>
 
-          {/* Connection status + agent chat */}
-          <span className={styles.agentStatus}>
-            <IconButton
-              active={chatOpen}
-              title={
-                panic
-                  ? 'Agent error \u2014 click to view'
-                  : isConnected
-                    ? 'Chat with agent (\u2325T)'
-                    : 'Agent not connected'
-              }
-              onClick={() => togglePanelTab('navigator', 'chat')}
-            >
-              {isAgentActive ? <Bot size={16} /> : <Code size={16} />}
-            </IconButton>
-            <StatusDot status={statusColor} />
-          </span>
+      <div className={styles.separator} />
 
-          {isAgentActive && <div className={styles.separator} />}
-          {isAgentActive && (
-            <IconButton
-              active={autoApply}
-              onClick={() => setAutoApply(!autoApply)}
-              title={autoApply ? 'Auto-apply on (click to disable)' : 'Auto-apply off (click to enable)'}
-            >
-              <Sun size={16} />
-            </IconButton>
-          )}
+      <span className={styles.agentStatus}>
+        <IconButton
+          active={chatOpen}
+          title={
+            panic
+              ? 'Agent error \u2014 click to view'
+              : isConnected
+                ? 'Chat with agent (\u2325T)'
+                : 'Agent not connected'
+          }
+          onClick={() => togglePanelTab('navigator', 'chat')}
+        >
+          {isAgentActive ? <Bot size={16} /> : <Code size={16} />}
+        </IconButton>
+        <StatusDot status={statusColor} />
+      </span>
 
-          {/* Apply button */}
-          {isAgentActive && (
-            <IconButton
-              mode="primary"
-              disabled={applyDisabled}
-              onClick={onSendEdit}
-              title={
-                applying
-                  ? 'Applying\u2026'
-                  : applied
-                    ? 'Applied'
-                    : 'Apply changes (\u2318\u21B5)'
-              }
-            >
-              {applying ? (
-                <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
-              ) : applied ? (
-                <Check size={16} />
-              ) : (
-                <ArrowRight size={16} />
-              )}
-            </IconButton>
-          )}
-
-        </Fragment>
+      {isAgentActive && <div className={styles.separator} />}
+      {isAgentActive && (
+        <IconButton
+          active={autoApply}
+          onClick={() => setAutoApply(!autoApply)}
+          title={autoApply ? 'Auto-apply on (click to disable)' : 'Auto-apply off (click to enable)'}
+        >
+          <Sun size={16} />
+        </IconButton>
       )}
 
-      {/* Collapse / expand toggle */}
-      <button
-        className={styles.collapseToggle}
-        onClick={toggleCollapsed}
-        title={collapsed ? 'Expand toolbar (\u2325.)' : 'Collapse toolbar (\u2325.)'}
-      >
-        {collapsed ? <ChevronsLeft size={14} /> : <ChevronsRight size={14} />}
-      </button>
+      {isAgentActive && (
+        <IconButton
+          mode="primary"
+          disabled={applyDisabled}
+          onClick={onSendEdit}
+          title={
+            applying
+              ? 'Applying\u2026'
+              : applied
+                ? 'Applied'
+                : 'Apply changes (\u2318\u21B5)'
+          }
+        >
+          {applying ? (
+            <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+          ) : applied ? (
+            <Check size={16} />
+          ) : (
+            <ArrowRight size={16} />
+          )}
+        </IconButton>
+      )}
     </div>
   );
 }
