@@ -211,6 +211,7 @@ export function InPagePanel() {
               onHover={handleHover}
               onTagChange={domOps.handleTagChange}
               onContextMenu={domOps.handleTreeContextMenu}
+              onMoveNode={domOps.handleMoveElement}
             />
           )}
           {navigatorTab === 'chat' && (

@@ -20,6 +20,11 @@ export interface UndoOp {
   newNodeId?: number;
   oldTag?: string;
   newTag?: string;
+  /** Move operation specifics: parent + next-sibling anchor before and after the move. */
+  oldParentId?: number;
+  oldSiblingId?: number | null;
+  newParentId?: number;
+  newSiblingId?: number | null;
   /** Batch of operations grouped as a single undo entry */
   operations?: UndoOp[];
 }

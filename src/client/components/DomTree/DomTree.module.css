@@ -41,6 +41,8 @@
   padding: 3px 6px;
   transition: background 0.1s;
   display: flex;
+  user-select: none;
+  touch-action: none;
 }
 
 .node:hover {
@@ -119,6 +121,29 @@
   margin-left: 4px;
   font-style: italic;
   font-size: 10px;
+}
+
+.tree.dragging,
+.tree.dragging .node {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.node.dragging {
+  opacity: 0.4;
+}
+
+.node.dropBefore {
+  box-shadow: inset 0 2px 0 0 var(--ls-accent);
+}
+
+.node.dropAfter {
+  box-shadow: inset 0 -2px 0 0 var(--ls-accent);
+}
+
+.node.dropInside {
+  outline: 1px solid var(--ls-accent);
+  outline-offset: -1px;
 }
 
 .textPreview {

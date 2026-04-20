@@ -22,7 +22,7 @@ import styles from './DomOperations.module.css';
 
 // ── Helpers ──
 
-const PROTECTED_TAGS = new Set(['html', 'body', 'head']);
+export const PROTECTED_TAGS = new Set(['html', 'body', 'head']);
 
 /** Find a DomNode by id inside a tree snapshot. */
 function findNodeInTree(tree: DomNode | null, targetId: number): DomNode | null {
@@ -106,6 +106,25 @@ export function duplicateElementById(id: number): number | null {
   const clone = el.cloneNode(true) as Element;
   el.parentNode.insertBefore(clone, el.nextSibling);
   return assignId(clone);
+}
+
+/**
+ * Move element `nodeId` to become a child of `newParentId`, inserted before
+ * the element with id `newSiblingId` (or appended when null).
+ * Blocks cycles (dropping into own descendant).
+ */
+export function moveElement(
+  nodeId: number,
+  newParentId: number,
+  newSiblingId: number | null,
+): boolean {
+  const el = getElementById(nodeId);
+  const parent = getElementById(newParentId);
+  if (!el || !parent) return false;
+  if (el === parent || el.contains(parent)) return false;
+  const ref = newSiblingId != null ? (getElementById(newSiblingId) ?? null) : null;
+  parent.insertBefore(el, ref);
+  return true;
 }
 
 /**
@@ -285,6 +304,40 @@ export function useDomOperations() {
     setContextMenu(null);
   }, [contextMenu, duplicateElement]);
 
+  // -- move (drag-to-reorder) --
+
+  const handleMoveElement = useCallback(
+    (nodeId: number, newParentId: number, newSiblingId: number | null) => {
+      const node = findNodeInTree(useStore.getState().domTree, nodeId);
+      if (!node || PROTECTED_TAGS.has(node.tag)) return;
+      const el = getElementById(nodeId);
+      if (!el || !el.parentElement) return;
+      const oldParent = el.parentElement;
+      const oldNextSibling = el.nextElementSibling;
+      const oldParentId = assignId(oldParent);
+      const oldSiblingId = oldNextSibling ? assignId(oldNextSibling) : null;
+      if (oldParentId === newParentId && oldSiblingId === newSiblingId) return;
+      const info = getElementInfoById(useStore.getState().domTree as any, nodeId);
+      const moved = moveElement(nodeId, newParentId, newSiblingId);
+      if (!moved) return;
+      useUndoStore.getState().pushDom({
+        type: 'dom',
+        action: 'move',
+        nodeId,
+        oldParentId,
+        oldSiblingId,
+        newParentId,
+        newSiblingId,
+      });
+      rebuildDomTree();
+      selectNode(nodeId);
+      expandToNode(nodeId);
+      scrollElementIntoView(nodeId);
+      queueEdit({ type: 'dom', ...info, value: 'move' } as Change);
+    },
+    [selectNode, expandToNode, queueEdit],
+  );
+
   // -- keyboard shortcuts (Cmd+D = duplicate, Delete = delete) --
 
   useEffect(() => {
@@ -318,6 +371,7 @@ export function useDomOperations() {
     handleAddSibling,
     duplicateElement,
     handleDuplicateElement,
+    handleMoveElement,
   };
 }
 

@@ -150,6 +150,20 @@ function applyDomEntry(entry: UndoOp, direction: UndoDirection): void {
       break;
     }
 
+    case 'move': {
+      const parentId = direction === 'undo' ? entry.oldParentId : entry.newParentId;
+      const siblingId = direction === 'undo' ? entry.oldSiblingId : entry.newSiblingId;
+      if (parentId == null) return;
+      const el = getElementById(entry.nodeId!);
+      const parent = getElementById(parentId);
+      if (!el || !parent) return;
+      const ref = siblingId != null ? (getElementById(siblingId) ?? null) : null;
+      parent.insertBefore(el, ref);
+      rebuildDomTree();
+      selectAndFetchStyles(entry.nodeId!);
+      break;
+    }
+
     case 'tag-change': {
       const targetTag = direction === 'undo' ? entry.oldTag! : entry.newTag!;
       const newId = replaceElementTag(entry.nodeId!, targetTag);

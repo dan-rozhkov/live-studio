@@ -6,7 +6,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-preact';
 import { useStore } from '../../state/store';
 import type { DomNode } from '../../state/slices/dom-slice';
+import { assignId, getElementById } from '../../bridge/dom-bridge';
 import styles from './DomTree.module.css';
+
+type DropZone = 'before' | 'after' | 'inside';
+
+interface DragState {
+  nodeId: number;
+  targetId: number | null;
+  zone: DropZone | null;
+}
+
+interface PendingDrag {
+  nodeId: number;
+  startX: number;
+  startY: number;
+}
 
 // ── Hidden tags (never shown in the tree) ──
 
@@ -60,9 +75,11 @@ interface TreeNodeProps {
   onHover: (id: number | null) => void;
   onTagChange?: (id: number, newTag: string) => void;
   onContextMenu?: (nodeId: number, x: number, y: number) => void;
+  onDragStart?: (nodeId: number, e: PointerEvent) => void;
+  drag: DragState | null;
 }
 
-function TreeNode({ node, depth, onSelect, onToggleSelect, onHover, onTagChange, onContextMenu: onCtxMenu }: TreeNodeProps) {
+function TreeNode({ node, depth, onSelect, onToggleSelect, onHover, onTagChange, onContextMenu: onCtxMenu, onDragStart, drag }: TreeNodeProps) {
   const selectedNodeId = useStore((s) => s.selectedNodeId);
   const selectedNodeIds = useStore((s) => s.selectedNodeIds);
   const hoveredNodeId = useStore((s) => s.hoveredNodeId);
@@ -180,13 +197,33 @@ function TreeNode({ node, depth, onSelect, onToggleSelect, onHover, onTagChange,
 
   const indent = depth * 16 + 6;
 
+  const isDragging = drag?.nodeId === node.id;
+  const isDropTarget = drag?.targetId === node.id && drag.zone;
+
   const nodeClass = [
     styles.node,
     isSelected ? (isPrimary ? styles.selected : styles.selectedSecondary) : '',
     isHovered ? styles.hovered : '',
+    isDragging ? styles.dragging : '',
+    isDropTarget && drag?.zone === 'before' ? styles.dropBefore : '',
+    isDropTarget && drag?.zone === 'after' ? styles.dropAfter : '',
+    isDropTarget && drag?.zone === 'inside' ? styles.dropInside : '',
   ]
     .filter(Boolean)
     .join(' ');
+
+  const handlePointerDown = useCallback(
+    (e: PointerEvent) => {
+      if (!onDragStart) return;
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      // Ignore drags from the chevron or the tag-edit input
+      if (target.closest(`.${styles.chevron}`)) return;
+      if (target.closest(`.${styles.tagInput}`)) return;
+      onDragStart(node.id, e);
+    },
+    [node.id, onDragStart],
+  );
 
   return (
     <>
@@ -201,6 +238,7 @@ function TreeNode({ node, depth, onSelect, onToggleSelect, onHover, onTagChange,
         onContextMenu={handleContextMenu}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onPointerDown={handlePointerDown}
       >
         {/* Expand/collapse chevron */}
         <span
@@ -254,6 +292,8 @@ function TreeNode({ node, depth, onSelect, onToggleSelect, onHover, onTagChange,
             onHover={onHover}
             onTagChange={onTagChange}
             onContextMenu={onCtxMenu}
+            onDragStart={onDragStart}
+            drag={drag}
           />
         ))}
     </>
@@ -262,17 +302,164 @@ function TreeNode({ node, depth, onSelect, onToggleSelect, onHover, onTagChange,
 
 // ── DomTree (root component) ──
 
+const DRAG_THRESHOLD = 4;
+const AUTOSCROLL_ZONE = 24;
+const AUTOSCROLL_STEP = 8;
+
 export interface DomTreeProps {
   onSelectNode: (id: number) => void;
   onToggleSelectNode?: (id: number) => void;
   onHover: (id: number | null) => void;
   onTagChange?: (id: number, newTag: string) => void;
   onContextMenu?: (nodeId: number, x: number, y: number) => void;
+  onMoveNode?: (nodeId: number, newParentId: number, newSiblingId: number | null) => void;
 }
 
-export function DomTree({ onSelectNode, onToggleSelectNode, onHover, onTagChange, onContextMenu }: DomTreeProps) {
+export function DomTree({ onSelectNode, onToggleSelectNode, onHover, onTagChange, onContextMenu, onMoveNode }: DomTreeProps) {
   const domTree = useStore((s) => s.domTree);
   const treeRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const dragRef = useRef<DragState | null>(null);
+  dragRef.current = drag;
+  const pendingRef = useRef<PendingDrag | null>(null);
+
+  const handleDragStart = useCallback(
+    (nodeId: number, e: PointerEvent) => {
+      if (!onMoveNode) return;
+      const walk = (node: DomNode | null): DomNode | null => {
+        if (!node) return null;
+        if (node.id === nodeId) return node;
+        for (const c of node.children) {
+          const f = walk(c);
+          if (f) return f;
+        }
+        return null;
+      };
+      const found = walk(useStore.getState().domTree);
+      if (!found || PROTECTED_TAGS.has(found.tag)) return;
+      pendingRef.current = { nodeId, startX: e.clientX, startY: e.clientY };
+    },
+    [onMoveNode],
+  );
+
+  useEffect(() => {
+    if (!onMoveNode) return;
+
+    let rafId = 0;
+    let lastClientY = 0;
+
+    const autoScroll = () => {
+      rafId = 0;
+      const tree = treeRef.current;
+      if (!tree || !dragRef.current) return;
+      const rect = tree.getBoundingClientRect();
+      const topDelta = lastClientY - rect.top;
+      const bottomDelta = rect.bottom - lastClientY;
+      let delta = 0;
+      if (topDelta >= 0 && topDelta < AUTOSCROLL_ZONE) delta = -AUTOSCROLL_STEP;
+      else if (bottomDelta >= 0 && bottomDelta < AUTOSCROLL_ZONE) delta = AUTOSCROLL_STEP;
+      if (delta !== 0) {
+        tree.scrollTop += delta;
+        rafId = requestAnimationFrame(autoScroll);
+      }
+    };
+
+    const resolveTarget = (nodeId: number, x: number, y: number): { targetId: number | null; zone: DropZone | null } => {
+      const tree = treeRef.current;
+      if (!tree) return { targetId: null, zone: null };
+      const rows = tree.querySelectorAll<HTMLElement>('[data-node-id]');
+      let row: HTMLElement | null = null;
+      for (const r of rows) {
+        const rect = r.getBoundingClientRect();
+        if (y >= rect.top && y <= rect.bottom && x >= rect.left && x <= rect.right) {
+          row = r;
+          break;
+        }
+      }
+      if (!row) return { targetId: null, zone: null };
+      const targetId = Number(row.dataset.nodeId);
+      if (!Number.isFinite(targetId)) return { targetId: null, zone: null };
+      const draggedEl = getElementById(nodeId);
+      const targetEl = getElementById(targetId);
+      if (!draggedEl || !targetEl) return { targetId: null, zone: null };
+      if (draggedEl === targetEl || draggedEl.contains(targetEl)) {
+        return { targetId, zone: null };
+      }
+      const rect = row.getBoundingClientRect();
+      const rel = (y - rect.top) / rect.height;
+      let zone: DropZone;
+      if (rel < 0.25) zone = 'before';
+      else if (rel > 0.75) zone = 'after';
+      else zone = 'inside';
+      if ((zone === 'before' || zone === 'after') && !targetEl.parentElement) {
+        return { targetId, zone: null };
+      }
+      return { targetId, zone };
+    };
+
+    const onMove = (e: PointerEvent) => {
+      lastClientY = e.clientY;
+      const pending = pendingRef.current;
+      const active = dragRef.current;
+      if (pending && !active) {
+        const dx = e.clientX - pending.startX;
+        const dy = e.clientY - pending.startY;
+        if (dx * dx + dy * dy < DRAG_THRESHOLD * DRAG_THRESHOLD) return;
+        const { targetId, zone } = resolveTarget(pending.nodeId, e.clientX, e.clientY);
+        setDrag({ nodeId: pending.nodeId, targetId, zone });
+        return;
+      }
+      if (!active) return;
+      const { targetId, zone } = resolveTarget(active.nodeId, e.clientX, e.clientY);
+      if (targetId !== active.targetId || zone !== active.zone) {
+        setDrag({ ...active, targetId, zone });
+      }
+      if (!rafId) rafId = requestAnimationFrame(autoScroll);
+    };
+
+    const commit = () => {
+      const d = dragRef.current;
+      if (!d || !d.targetId || !d.zone) return;
+      const targetEl = getElementById(d.targetId);
+      if (!targetEl) return;
+      if (d.zone === 'inside') {
+        onMoveNode(d.nodeId, d.targetId, null);
+      } else {
+        const parent = targetEl.parentElement;
+        if (!parent) return;
+        const parentId = assignId(parent);
+        if (d.zone === 'before') {
+          onMoveNode(d.nodeId, parentId, d.targetId);
+        } else {
+          const next = targetEl.nextElementSibling;
+          onMoveNode(d.nodeId, parentId, next ? assignId(next) : null);
+        }
+      }
+    };
+
+    const onUp = () => {
+      if (dragRef.current) commit();
+      pendingRef.current = null;
+      if (dragRef.current) setDrag(null);
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        pendingRef.current = null;
+        setDrag(null);
+      }
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('keydown', onKey);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [onMoveNode]);
 
   if (!domTree) {
     return <div className={styles.empty}>Loading DOM...</div>;
@@ -284,7 +471,7 @@ export function DomTree({ onSelectNode, onToggleSelectNode, onHover, onTagChange
   }
 
   return (
-    <div className={styles.tree} ref={treeRef}>
+    <div className={`${styles.tree} ${drag ? styles.dragging : ''}`} ref={treeRef}>
       {rootNodes.map((node) => (
         <TreeNode
           key={node.id}
@@ -295,8 +482,11 @@ export function DomTree({ onSelectNode, onToggleSelectNode, onHover, onTagChange
           onHover={onHover}
           onTagChange={onTagChange}
           onContextMenu={onContextMenu}
+          onDragStart={handleDragStart}
+          drag={drag}
         />
       ))}
     </div>
   );
 }
+
