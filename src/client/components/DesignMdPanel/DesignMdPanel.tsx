@@ -88,6 +88,54 @@ function Section({ title, children, defaultOpen = true }: {
 // Empty state
 // ─────────────────────────────────────────────────────────────────────────────
 
+function EmptyIllustration() {
+  return (
+    <svg
+      class={styles.emptyIllustration}
+      width="96"
+      height="72"
+      viewBox="0 0 96 72"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      {/* window frame */}
+      <rect x="2" y="2" width="92" height="68" rx="4" />
+      {/* traffic lights */}
+      <circle cx="8" cy="8" r="1" />
+      <circle cx="13" cy="8" r="1" />
+      <circle cx="18" cy="8" r="1" />
+      {/* sidebar divider */}
+      <line x1="32" y1="14" x2="32" y2="70" />
+      {/* sidebar rows */}
+      <line x1="7" y1="20" x2="18" y2="20" />
+      <line x1="7" y1="26" x2="22" y2="26" />
+      <line x1="7" y1="32" x2="18" y2="32" />
+      <line x1="7" y1="38" x2="22" y2="38" />
+      {/* content rows */}
+      <line x1="37" y1="20" x2="48" y2="20" />
+      <line x1="52" y1="20" x2="60" y2="20" />
+      <line x1="37" y1="26" x2="46" y2="26" />
+      <line x1="50" y1="26" x2="58" y2="26" />
+      <line x1="37" y1="32" x2="48" y2="32" />
+      {/* dashed placeholder frame */}
+      <rect
+        x="56"
+        y="38"
+        width="32"
+        height="26"
+        rx="1"
+        stroke-dasharray="3 2"
+      />
+      {/* sparkle */}
+      <path d="M72 45 L73 49 L77 50 L73 51 L72 55 L71 51 L67 50 L71 49 Z" />
+    </svg>
+  );
+}
+
 function EmptyState() {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -97,6 +145,7 @@ function EmptyState() {
   };
   return (
     <div class={styles.empty}>
+      <EmptyIllustration />
       <div class={styles.emptyTitle}>No DESIGN.md yet</div>
       <div class={styles.emptyText}>
         Live Studio looks for <code>DESIGN.md</code> at your project root. Ask

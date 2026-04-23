@@ -61,6 +61,12 @@
   color: var(--cs-feint-text);
 }
 
+.emptyIllustration {
+  color: var(--cs-feint-text);
+  opacity: 0.75;
+  margin-bottom: 4px;
+}
+
 .emptyTitle {
   font-size: 13px;
   font-weight: 600;

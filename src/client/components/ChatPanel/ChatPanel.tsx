@@ -99,7 +99,10 @@ export function ChatPanel({ onSend }: ChatPanelProps) {
       <div class={styles.messages} ref={messagesRef}>
         {!hasMessages && !agentResponding && (
           <div class={styles.emptyState}>
-            Send a message to your AI agent. Selected elements will be attached automatically.
+            <EmptyIllustration />
+            <div class={styles.emptyText}>
+              Send a message to your AI agent. Selected elements will be attached automatically.
+            </div>
           </div>
         )}
 
@@ -189,6 +192,43 @@ export function ChatPanel({ onSend }: ChatPanelProps) {
         </button>
       </div>
     </div>
+  );
+}
+
+function EmptyIllustration() {
+  return (
+    <svg
+      class={styles.emptyIllustration}
+      width="96"
+      height="72"
+      viewBox="0 0 96 72"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      {/* window frame */}
+      <rect x="2" y="2" width="92" height="68" rx="4" />
+      {/* traffic lights */}
+      <circle cx="8" cy="8" r="1" />
+      <circle cx="13" cy="8" r="1" />
+      <circle cx="18" cy="8" r="1" />
+      {/* top divider */}
+      <line x1="2" y1="14" x2="94" y2="14" />
+      {/* incoming agent bubble (left) */}
+      <path d="M10 22 h34 a3 3 0 0 1 3 3 v10 a3 3 0 0 1 -3 3 h-28 l-6 4 v-4 a3 3 0 0 1 -3 -3 v-10 a3 3 0 0 1 3 -3 z" />
+      <line x1="14" y1="27" x2="38" y2="27" />
+      <line x1="14" y1="32" x2="32" y2="32" />
+      {/* outgoing user bubble (right, dashed) */}
+      <path
+        d="M52 44 h30 a3 3 0 0 1 3 3 v10 a3 3 0 0 1 -3 3 h-24 l-6 4 v-4 a3 3 0 0 1 -3 -3 v-10 a3 3 0 0 1 3 -3 z"
+        stroke-dasharray="3 2"
+      />
+      {/* sparkle on the outgoing bubble */}
+      <path d="M68 48 L69 51 L72 52 L69 53 L68 56 L67 53 L64 52 L67 51 Z" />
+    </svg>
   );
 }
 

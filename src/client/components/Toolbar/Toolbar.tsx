@@ -1,7 +1,7 @@
 import { h } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { useStore } from '../../state/store';
-import { MousePointer, ArrowRight, Check, Bot, Code, Eye, Loader, Copy, Camera } from 'lucide-preact';
+import { MousePointer2, ArrowRight, Check, Bot, Code, Eye, Loader, Copy, Camera } from 'lucide-preact';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { getElementById } from '../../bridge/dom-bridge';
 import { getVueTracerInfo } from '../../bridge/component-bridge';
@@ -286,7 +286,7 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit, onScreenshot }:
         onClick={onTogglePicker}
         title="Select element (\u2325C)"
       >
-        <MousePointer size={16} />
+        <MousePointer2 size={16} />
       </IconButton>
 
       <IconButton
