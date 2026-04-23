@@ -110,6 +110,10 @@ function EmptyState() {
         </a>{' '}
         spec.
       </div>
+      <div class={styles.emptyText}>
+        If you already have one, the <code>live-studio</code> MCP server may not
+        be running — make sure it's started and connected.
+      </div>
       <button class={styles.emptyBtn} onClick={copy}>
         {copied ? <Check size={12} /> : <Clipboard size={12} />}
         {copied ? 'Copied' : 'Copy prompt'}

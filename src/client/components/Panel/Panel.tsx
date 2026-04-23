@@ -46,7 +46,6 @@ function getToolbarBottom(): number {
 interface PanelPrefs {
   dock: DockPosition;
   size: number;
-  activeTab: string;
   position?: PanelPosition;
 }
 
@@ -109,8 +108,6 @@ function usePanelPosition(panelId: PanelId) {
   const claims = useStore((s) => s.dockedClaims);
   const setPanelDock = useStore((s) => s.setPanelDock);
   const setPanelSize = useStore((s) => s.setPanelSize);
-  const setPanelActiveTab = useStore((s) => s.setPanelActiveTab);
-
   const [position, setPosition] = useState<PanelPosition>(() =>
     getDefaultPosition(panelId, panel.dock),
   );
@@ -126,10 +123,9 @@ function usePanelPosition(panelId: PanelId) {
     if (prefs) {
       setPanelDock(panelId, prefs.dock);
       setPanelSize(panelId, prefs.size);
-      setPanelActiveTab(panelId, prefs.activeTab);
       if (prefs.position) setPosition(prefs.position);
     }
-  }, [panelId, setPanelDock, setPanelSize, setPanelActiveTab]);
+  }, [panelId, setPanelDock, setPanelSize]);
 
   // Clamp to toolbar
   useEffect(() => {
@@ -168,7 +164,7 @@ function usePanelPosition(panelId: PanelId) {
   const prevPrefsRef = useRef('');
 
   useEffect(() => {
-    const key = `${panel.dock}:${panel.size}:${panel.activeTab}:${position.top}:${position.right}:${position.height ?? ''}`;
+    const key = `${panel.dock}:${panel.size}:${position.top}:${position.right}:${position.height ?? ''}`;
     if (!prevPrefsRef.current || prevPrefsRef.current === key) {
       prevPrefsRef.current = key;
       return;
@@ -179,14 +175,13 @@ function usePanelPosition(panelId: PanelId) {
       savePrefs(panelId, {
         dock: panel.dock,
         size: panel.size,
-        activeTab: panel.activeTab,
         position,
       });
     }, 300);
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [panelId, panel.dock, panel.size, panel.activeTab, position]);
+  }, [panelId, panel.dock, panel.size, position]);
 
   // Computed style
   const style = useMemo(() => {
