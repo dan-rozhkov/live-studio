@@ -1,0 +1,55 @@
+/* ComponentSection — editor for the selected component's props */
+
+.readonlyRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.readonlyLabel {
+  font-family: var(--cs-font-mono);
+  font-size: 11px;
+  color: var(--cs-feint-text);
+  width: 76px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.readonlyValue {
+  font-family: var(--cs-font-mono);
+  font-size: 11px;
+  color: var(--cs-feint-text);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+
+.numberInput {
+  background: var(--cs-input-bg);
+  border: 1px solid transparent;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font);
+  border-radius: 4px;
+  outline: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.numberInput:hover {
+  border-color: var(--cs-input-border);
+}
+
+.numberInput:focus {
+  border-color: transparent;
+  border-bottom-color: var(--cs-accent);
+}

@@ -2,7 +2,7 @@ import { getElementById } from '../../bridge/dom-bridge';
 import { detectComponent, getTracerInfo } from '../../bridge/component-bridge';
 
 export interface Change {
-  type: 'style' | 'attribute' | 'text' | 'dom';
+  type: 'style' | 'attribute' | 'text' | 'dom' | 'prop';
   element?: string;
   path?: string;
   name?: string;

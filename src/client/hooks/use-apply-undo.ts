@@ -62,6 +62,20 @@ export function applyUndoEntry(entry: UndoOp, direction: UndoDirection): void {
       break;
     }
 
+    case 'prop': {
+      // Revert the in-memory snapshot so the inspector reflects the reversed value.
+      // Live DOM is only patched for `children` rendered as a lone text node —
+      // all other props need the agent to rewrite source; undo stays panel-only.
+      useStore.getState().updateSelectedProp(entry.property!, value ?? '');
+      if (entry.property === 'children' && entry.nodeId != null) {
+        const el = getElementById(entry.nodeId);
+        if (el && el.childNodes.length === 1 && el.firstChild?.nodeType === Node.TEXT_NODE) {
+          el.firstChild.nodeValue = value ?? '';
+        }
+      }
+      break;
+    }
+
     case 'dom': {
       applyDomEntry(entry, direction);
       break;

@@ -1,6 +1,6 @@
 import { h, Fragment } from 'preact';
 import { useState, useCallback, useMemo, useRef } from 'preact/hooks';
-import { ChevronRight, ChevronDown, Undo2, Redo2, Sun, Moon, Clipboard, Check, X } from 'lucide-preact';
+import { ChevronRight, ChevronDown, Undo2, Redo2, Sun, Moon, Clipboard, Check, X, Diamond } from 'lucide-preact';
 import { useStore } from '../../state/store';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { LayoutSection } from './sections/LayoutSection';
@@ -11,6 +11,7 @@ import { StrokeSection } from './sections/StrokeSection';
 import { EffectsSection } from './sections/EffectsSection';
 import { TransformSection } from './sections/TransformSection';
 import { AttributesSection } from './sections/AttributesSection';
+import { ComponentSection } from './sections/ComponentSection';
 import { getElementById } from '../../bridge/dom-bridge';
 import { useUndoStore } from '../../hooks/use-undo';
 import { applyUndoEntry } from '../../hooks/use-apply-undo';
@@ -142,6 +143,8 @@ export function PropertiesPanel() {
   const stagedChanges = useStore((s) => s.stagedChanges);
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
+  const selectedComponent = useStore((s) => s.selectedComponent);
+  const updateSelectedProp = useStore((s) => s.updateSelectedProp);
   const hasPast = useUndoStore((s) => s.past.length > 0);
   const hasFuture = useUndoStore((s) => s.future.length > 0);
   const [copiedChanges, setCopiedChanges] = useState(false);
@@ -179,6 +182,8 @@ export function PropertiesPanel() {
     () => (selectedNode ? buildSelectorFromNode(selectedNode) : ''),
     [selectedNode],
   );
+
+  const componentRootName = selectedComponent?.isRoot ? selectedComponent.name : null;
 
   const getValue = useCallback(
     (prop: string) => computedStyles[prop] ?? '',
@@ -317,6 +322,46 @@ export function PropertiesPanel() {
     [selectedNode, selectedNodeId, selector, queueEdit, setNodeAttribute],
   );
 
+  const handlePropChange = useCallback(
+    (name: string, newValue: unknown) => {
+      if (!selectedComponent) return;
+      const oldValue = selectedComponent.props[name];
+      if (oldValue === newValue) return;
+
+      const oldStr = String(oldValue ?? '');
+      const newStr = String(newValue ?? '');
+
+      useUndoStore.getState().push({
+        type: 'prop',
+        nodeId: selectedNodeId,
+        property: name,
+        oldValue: oldStr,
+        newValue: newStr,
+      });
+
+      // Live preview is only safe for string `children` rendered as a lone text node;
+      // everything else requires the agent to rewrite source.
+      if (name === 'children' && typeof newValue === 'string' && selectedNodeId !== null) {
+        const el = getElementById(selectedNodeId);
+        if (el && el.childNodes.length === 1 && el.firstChild?.nodeType === Node.TEXT_NODE) {
+          el.firstChild.nodeValue = newValue;
+        }
+      }
+
+      updateSelectedProp(name, newValue);
+
+      queueEdit({
+        type: 'prop',
+        element: selector,
+        component: selectedComponent.name,
+        source: selectedComponent.source,
+        name,
+        value: `${oldStr} \u2192 ${newStr}`,
+      });
+    },
+    [selectedComponent, selectedNodeId, selector, queueEdit, updateSelectedProp],
+  );
+
   if (selectedNodeId === null || !selectedNode) {
     return (
       <div class={styles.empty}>
@@ -328,7 +373,12 @@ export function PropertiesPanel() {
   return (
     <div class={styles.panel}>
       <div class={styles.header}>
-        <span class={styles.headerTag}>{selectedNode.tag}</span>
+        {componentRootName && (
+          <Diamond size={12} stroke="#a855f7" />
+        )}
+        <span class={styles.headerTag}>
+          {componentRootName ?? selectedNode.tag}
+        </span>
         <ChevronDown size={12} style={{ color: 'var(--cs-feint-text)' }} />
         <span class={styles.headerSelector}>{selector}</span>
         <div class={styles.headerActions}>
@@ -375,6 +425,14 @@ export function PropertiesPanel() {
       />
 
       <div class={styles.sections}>
+        {selectedComponent && Object.keys(selectedComponent.props).length > 0 && (
+          <Section title="Component">
+            <ComponentSection
+              props={selectedComponent.props}
+              onPropChange={handlePropChange}
+            />
+          </Section>
+        )}
         <Section title="Layout">
           <LayoutSection
             getValue={getValue}

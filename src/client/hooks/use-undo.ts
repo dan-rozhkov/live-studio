@@ -7,7 +7,7 @@ import { create } from 'zustand';
  * - batch: groups multiple operations into one undo step
  */
 export interface UndoOp {
-  type: 'style' | 'text' | 'attribute' | 'attribute-delete' | 'token' | 'dom' | 'batch';
+  type: 'style' | 'text' | 'attribute' | 'attribute-delete' | 'token' | 'dom' | 'batch' | 'prop';
   nodeId?: number | null;
   property?: string;
   oldValue?: string;

@@ -18,6 +18,18 @@ export interface TracerResult {
   file: string;
 }
 
+/** Snapshot of the component instance that owns a selected DOM element. */
+export interface ComponentProps {
+  name: string;
+  /** JSX call-site source: "src/App.tsx:12:4" (from data-source / vue-tracer / debugSource) */
+  source?: string;
+  framework: 'react' | 'vue';
+  /** Filtered snapshot of live props — usable for initial values & type inference */
+  props: Record<string, unknown>;
+  /** True when `el` is the rendered root of this component (not a plain child tag inside it). */
+  isRoot: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Shared React helpers
 // ---------------------------------------------------------------------------
@@ -345,6 +357,135 @@ export function getReactTracerInfo(el: Element): TracerResult | null {
     tree: parts.join(" > "),
     file: source,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Component props extraction (React fiber + Vue 3 instance)
+// ---------------------------------------------------------------------------
+
+function isDroppedPropKey(key: string): boolean {
+  // `key`/`ref` are framework protocol, `__*` are framework internals.
+  return key === 'key' || key === 'ref' || key.startsWith('__');
+}
+
+/** Copy `raw`, keeping only primitive/editable values. May return `{}`. */
+function filterProps(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (isDroppedPropKey(k)) continue;
+    if (typeof v === 'function') continue;
+    if (k === 'children') {
+      const t = typeof v;
+      if (v != null && t !== 'string' && t !== 'number' && t !== 'boolean') continue;
+    }
+    out[k] = v;
+  }
+  return out;
+}
+
+function getVueName(type: any): string | undefined {
+  return type?.name || type?.__name || type?.displayName;
+}
+
+/**
+ * Generic wrapper names from React / Radix / similar design-system primitives.
+ * They show up in the fiber chain but aren't what users think of as "the
+ * component" — skip them when identifying the user-named component.
+ */
+const GENERIC_WRAPPER_NAMES = new Set([
+  'Primitive', 'Slot', 'SlotClone', 'ForwardRef', 'Memo',
+  'Anonymous', 'Fragment', 'Portal', 'Provider', 'Consumer',
+]);
+
+/**
+ * Walk a fiber chain and return the first user-named component (skipping
+ * generic wrappers). Returns both the fiber (for prop/source extraction)
+ * and the resolved name.
+ */
+function findUserComponentFiber(start: any): { fiber: any; name: string } | null {
+  let cur: any = start;
+  while (cur) {
+    if (cur.type && typeof cur.type !== 'string') {
+      const n: string | undefined = cur.type.displayName || cur.type.name;
+      if (n && !GENERIC_WRAPPER_NAMES.has(n)) return { fiber: cur, name: n };
+    }
+    cur = cur.return;
+  }
+  return null;
+}
+
+export function extractReactProps(el: Element): ComponentProps | null {
+  const key = getReactFiberKey(el);
+  if (!key) return null;
+  const hostFiber: any = (el as any)[key];
+  if (!hostFiber) return null;
+
+  // Root-host: the element's own fiber is a host (string type) whose parent
+  // is a component fiber — i.e. this element IS the component's rendered root.
+  const isRoot = typeof hostFiber.type === 'string'
+    && !!hostFiber.return?.type
+    && typeof hostFiber.return.type !== 'string';
+
+  const found = findUserComponentFiber(hostFiber);
+  if (!found) return null;
+  const { fiber, name } = found;
+
+  let source: string | undefined;
+  const dataSource = el.getAttribute('data-source')
+    ?? el.closest('[data-source]')?.getAttribute('data-source');
+  if (dataSource) {
+    source = dataSource;
+  } else if (fiber._debugSource?.fileName) {
+    source = normaliseFilePath(fiber._debugSource.fileName, fiber._debugSource.lineNumber);
+  } else if (fiber._debugOwner?._debugSource?.fileName) {
+    const d = fiber._debugOwner._debugSource;
+    source = normaliseFilePath(d.fileName, d.lineNumber);
+  }
+
+  return {
+    name,
+    source,
+    framework: 'react',
+    props: filterProps(fiber.memoizedProps),
+    isRoot,
+  };
+}
+
+export function extractVueProps(el: Element): ComponentProps | null {
+  let cur: Element | null = el;
+  let instance: any = null;
+  while (cur) {
+    instance = (cur as any).__vueParentComponent;
+    if (instance) break;
+    cur = cur.parentElement;
+  }
+  if (!instance) return null;
+
+  const type = instance.type;
+  const name = getVueName(type);
+  if (!name) return null;
+
+  let source: string | undefined;
+  const tracerStore: any = (globalThis as any).__vue_tracer__;
+  if (tracerStore?.vnodeToPos && instance.vnode?.props) {
+    const pos = tracerStore.vnodeToPos.get(instance.vnode.props);
+    if (pos) source = normaliseFilePath(pos[0], pos[1], pos[2]);
+  }
+  if (!source && type?.__file) source = normaliseFilePath(type.__file);
+
+  return {
+    name,
+    source,
+    framework: 'vue',
+    props: filterProps(instance.props),
+    isRoot: instance.subTree?.el === el,
+  };
+}
+
+/** Tries React first, then Vue 3. */
+export function extractComponentProps(el: Element): ComponentProps | null {
+  return extractReactProps(el) ?? extractVueProps(el) ?? null;
 }
 
 // ---------------------------------------------------------------------------
