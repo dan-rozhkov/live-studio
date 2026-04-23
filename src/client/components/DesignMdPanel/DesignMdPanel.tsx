@@ -1,4 +1,4 @@
-import { h, Fragment, type JSX } from 'preact';
+import { h } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { marked } from 'marked';
 import { ChevronRight, Clipboard, Check, AlertTriangle } from 'lucide-preact';
@@ -6,12 +6,12 @@ import { useStore } from '../../state/store';
 import {
   parseDesignMd,
   resolveRef,
-  lookupRef,
   contrastRatio,
   toCssLength,
   type DesignMdDoc,
   type TypographyToken,
 } from './design-md-parse';
+import type { JSX } from 'preact';
 import styles from './DesignMdPanel.module.css';
 
 const SKILL_PROMPT = `Create a DESIGN.md file at the project root following the google-labs-code/design.md spec. Inspect Tailwind config, CSS custom properties, and existing component styles to derive real tokens. See the /studio skill for the full template and schema.`;
@@ -41,7 +41,6 @@ export function DesignMdPanel() {
       {doc.typography && <TypographySection doc={doc} />}
       {doc.rounded && <RoundedSection doc={doc} />}
       {doc.spacing && <SpacingSection doc={doc} />}
-      {doc.components && <ComponentsSection doc={doc} />}
       {body.trim() && <MarkdownBody body={body} />}
     </div>
   );
@@ -249,185 +248,6 @@ function SpacingSection({ doc }: { doc: DesignMdDoc }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Components — render actual previews with resolved tokens applied
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface ResolvedStyles {
-  base: JSX.CSSProperties;
-  hover: JSX.CSSProperties;
-  active: JSX.CSSProperties;
-}
-
-function applyTypography(target: JSX.CSSProperties, t: TypographyToken): void {
-  if (t.fontFamily) target.fontFamily = t.fontFamily;
-  if (t.fontSize != null)
-    target.fontSize = typeof t.fontSize === 'number' ? `${t.fontSize}px` : t.fontSize;
-  if (t.fontWeight != null) target.fontWeight = t.fontWeight;
-  if (t.lineHeight != null) target.lineHeight = t.lineHeight;
-  if (t.letterSpacing != null)
-    target.letterSpacing =
-      typeof t.letterSpacing === 'number' ? `${t.letterSpacing}px` : t.letterSpacing;
-  if (t.fontFeature) target.fontFeatureSettings = t.fontFeature;
-  if (t.fontVariation) target.fontVariationSettings = t.fontVariation;
-}
-
-function applyProp(
-  target: JSX.CSSProperties,
-  key: string,
-  rawVal: string,
-  doc: DesignMdDoc,
-): void {
-  if (key === 'font') {
-    const typo = lookupRef(doc, rawVal);
-    if (typo && typeof typo === 'object') applyTypography(target, typo as TypographyToken);
-    return;
-  }
-  const { value, unresolved } = resolveRef(doc, rawVal);
-  if (unresolved) return;
-  switch (key) {
-    case 'background': target.background = value; break;
-    case 'color': target.color = value; break;
-    case 'border': target.border = value; break;
-    case 'radius': target.borderRadius = value; break;
-    case 'shadow': target.boxShadow = value; break;
-    case 'width': target.width = value; break;
-    case 'height': target.height = value; break;
-    case 'padding-y': target.paddingTop = value; target.paddingBottom = value; break;
-    case 'padding-x': target.paddingLeft = value; target.paddingRight = value; break;
-    // Unknown keys (e.g. project-specific) are silently ignored — this is a preview.
-  }
-}
-
-function resolveComponentStyles(
-  props: Record<string, string>,
-  doc: DesignMdDoc,
-): ResolvedStyles {
-  const out: ResolvedStyles = { base: {}, hover: {}, active: {} };
-  for (const [key, raw] of Object.entries(props)) {
-    if (key.startsWith('hover-')) applyProp(out.hover, key.slice(6), raw, doc);
-    else if (key.startsWith('active-')) applyProp(out.active, key.slice(7), raw, doc);
-    else if (key.startsWith('selected-')) continue; // no demo surface for selection
-    else applyProp(out.base, key, raw, doc);
-  }
-  return out;
-}
-
-function styleToCss(style: JSX.CSSProperties): string {
-  const pairs: string[] = [];
-  for (const [k, v] of Object.entries(style)) {
-    if (v == null) continue;
-    const prop = k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-    pairs.push(`${prop}:${v}`);
-  }
-  return pairs.join(';');
-}
-
-type ElementKind = 'button' | 'input' | 'chip' | 'row' | 'surface';
-
-function pickElementKind(name: string): ElementKind {
-  const n = name.toLowerCase();
-  if (n.includes('button') || n.includes('btn')) return 'button';
-  if (n.includes('input') || n.includes('field') || n.includes('textarea')) return 'input';
-  if (n.includes('chip') || n.includes('tag') || n.includes('badge')) return 'chip';
-  if (n.includes('row') || n.includes('item') || n.includes('cell')) return 'row';
-  return 'surface';
-}
-
-function renderPreview(name: string, kind: ElementKind, className: string): h.JSX.Element {
-  switch (kind) {
-    case 'button':
-      return <button class={className}>{name}</button>;
-    case 'input':
-      return <input class={className} type="text" placeholder={name} />;
-    case 'chip':
-      return <span class={className}>{name}</span>;
-    case 'row':
-      return (
-        <div class={className}>
-          <span>{name}</span>
-          <span class={styles.rowMeta}>row · hover me</span>
-        </div>
-      );
-    case 'surface':
-    default:
-      return (
-        <div class={className}>
-          <div class={styles.surfaceLabel}>{name}</div>
-        </div>
-      );
-  }
-}
-
-function ComponentPreview({ name, props, doc, slug }: {
-  name: string;
-  props: Record<string, string>;
-  doc: DesignMdDoc;
-  slug: string;
-}) {
-  const { base, hover, active } = useMemo(
-    () => resolveComponentStyles(props, doc),
-    [props, doc],
-  );
-  const kind = pickElementKind(name);
-  const cls = `ls-cmp-${slug}`;
-  const kindClass = kindToClass(kind);
-  const className = `${styles.preview} ${kindClass} ${cls}`;
-
-  // Scoped stylesheet: inline styles can't reach :hover / :active,
-  // and we want width/padding to come from tokens rather than CSS modules.
-  const baseCss = styleToCss(base);
-  const hoverCss = styleToCss(hover);
-  const activeCss = styleToCss(active);
-  const scoped = [
-    baseCss && `.${cls}{${baseCss}}`,
-    hoverCss && `.${cls}:hover{${hoverCss}}`,
-    activeCss && `.${cls}:active{${activeCss}}`,
-  ].filter(Boolean).join('\n');
-
-  return (
-    <div class={styles.componentCell}>
-      {scoped && <style>{scoped}</style>}
-      <div class={styles.previewWrap}>
-        {renderPreview(name, kind, className)}
-      </div>
-      <div class={styles.componentName}>{name}</div>
-    </div>
-  );
-}
-
-function kindToClass(kind: ElementKind): string {
-  switch (kind) {
-    case 'button': return styles.preview_button;
-    case 'input': return styles.preview_input;
-    case 'chip': return styles.preview_chip;
-    case 'row': return styles.preview_row;
-    case 'surface': return styles.preview_surface;
-  }
-}
-
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
-function ComponentsSection({ doc }: { doc: DesignMdDoc }) {
-  const entries = Object.entries(doc.components ?? {});
-  return (
-    <Section title="Components" defaultOpen={true}>
-      <div class={styles.componentGrid}>
-        {entries.map(([name, props]) => (
-          <ComponentPreview
-            key={name}
-            name={name}
-            props={props}
-            doc={doc}
-            slug={slugify(name)}
-          />
-        ))}
-      </div>
-    </Section>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Markdown body
