@@ -72,6 +72,24 @@ export function resolveRef(
   return resolveRef(doc, cur, seen);
 }
 
+/**
+ * Look up the terminal value of a `{path.to.token}` reference.
+ * Unlike resolveRef, this returns the raw value (object or scalar) so callers
+ * can dig into structured tokens like typography.
+ */
+export function lookupRef(doc: DesignMdDoc, raw: unknown): unknown {
+  const s = String(raw ?? '');
+  const m = s.match(REF_RE);
+  if (!m) return raw;
+  const parts = m[1].trim().split('.');
+  let cur: any = doc;
+  for (const p of parts) {
+    if (cur && typeof cur === 'object' && p in cur) cur = cur[p];
+    else return null;
+  }
+  return cur;
+}
+
 /** Simple WCAG relative luminance contrast ratio. */
 export function contrastRatio(fgHex: string, bgHex: string): number | null {
   const fg = hexToRgb(fgHex);

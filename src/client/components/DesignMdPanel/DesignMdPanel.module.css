@@ -288,41 +288,96 @@
 
 /* ── Components ── */
 
-.componentList {
+.componentGrid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
-.component {
-  border: 1px solid var(--cs-border);
-  border-radius: 6px;
-  padding: 8px 10px;
+.componentCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .componentName {
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.componentProps {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 10px;
+  font-family: var(--cs-font-mono, monospace);
   font-size: 10px;
-}
-
-.componentKey {
   color: var(--cs-feint-text);
-  font-family: var(--cs-font-mono, monospace);
 }
 
-.componentValue {
-  color: var(--cs-foreground);
-  font-family: var(--cs-font-mono, monospace);
+.previewWrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px;
+  border-radius: 6px;
+  background:
+    repeating-conic-gradient(
+      color-mix(in srgb, var(--cs-foreground) 4%, transparent) 0% 25%,
+      transparent 0% 50%
+    )
+    50% / 12px 12px;
+  border: 1px solid var(--cs-border);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+/* Base preview reset so designs come through cleanly. */
+.preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  transition: background 80ms ease, color 80ms ease, box-shadow 80ms ease;
+}
+
+.preview_button {
+  padding: 6px 12px;
+  min-height: 28px;
+}
+
+.preview_input {
+  padding: 6px 10px;
+  min-height: 28px;
+  min-width: 140px;
+  cursor: text;
+  outline: none;
+}
+
+.preview_chip {
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+
+.preview_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: 24px;
+}
+
+.preview_surface {
+  min-height: 40px;
+  padding: 10px;
+  display: flex;
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.surfaceLabel {
+  font-family: var(--cs-font-mono, monospace);
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.rowMeta {
+  opacity: 0.6;
+  font-size: 10px;
 }
 
 .broken {
