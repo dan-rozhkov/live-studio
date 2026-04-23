@@ -1,7 +1,7 @@
 import { h } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { useStore } from '../../state/store';
-import { MousePointer, ArrowRight, Check, Bot, Code, Sun, Loader, Copy, Camera } from 'lucide-preact';
+import { MousePointer, ArrowRight, Check, Bot, Code, Eye, Loader, Copy, Camera } from 'lucide-preact';
 import type { DomNode } from '../../state/slices/dom-slice';
 import { getElementById } from '../../bridge/dom-bridge';
 import { getVueTracerInfo } from '../../bridge/component-bridge';
@@ -334,7 +334,7 @@ export function Toolbar({ isPicking, onTogglePicker, onSendEdit, onScreenshot }:
           onClick={() => setAutoApply(!autoApply)}
           title={autoApply ? 'Auto-apply on (click to disable)' : 'Auto-apply off (click to enable)'}
         >
-          <Sun size={16} />
+          <Eye size={16} />
         </IconButton>
       )}
 
