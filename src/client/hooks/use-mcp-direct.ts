@@ -183,6 +183,8 @@ export function useMcpDirect(mcpPort?: number) {
             store.setAgentResponding(false);
           } else if (msg.type === 'agent-responding') {
             store.setAgentResponding(msg.active);
+          } else if (msg.type === 'design-md') {
+            store.setDesignMd(msg.content ?? null);
           }
         } catch {
           // Ignore malformed messages

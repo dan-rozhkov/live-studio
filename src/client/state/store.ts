@@ -8,6 +8,7 @@ import { createUiSlice, type UiSlice } from './slices/ui-slice';
 import { createChatSlice, type ChatSlice } from './slices/chat-slice';
 import { createErrorSlice, type ErrorSlice } from './slices/error-slice';
 import { createPanelsSlice, type PanelsSlice } from './slices/panels-slice';
+import { createDesignMdSlice, type DesignMdSlice } from './slices/design-md-slice';
 
 export type StoreState = DomSlice &
   StylesSlice &
@@ -15,7 +16,8 @@ export type StoreState = DomSlice &
   UiSlice &
   ChatSlice &
   ErrorSlice &
-  PanelsSlice;
+  PanelsSlice &
+  DesignMdSlice;
 
 /**
  * Main Zustand store with Immer middleware.
@@ -39,6 +41,7 @@ export const useStore = create<StoreState>()(
       ...createChatSlice(set, get),
       ...createErrorSlice(set, get),
       ...createPanelsSlice(set, get),
+      ...createDesignMdSlice(set, get),
     };
   })
 );

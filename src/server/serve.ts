@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { DevToolsBridge } from "./bridge.js";
+import { findProjectRoot } from "./project-root.js";
 
 // ---------------------------------------------------------------------------
 // Tool description & argument schema
@@ -214,6 +215,7 @@ export async function startServer(port?: number): Promise<void> {
   );
 
   const bridge = new DevToolsBridge(port);
+  bridge.watchDesignMd(findProjectRoot());
 
   initTool(server, bridge);
 

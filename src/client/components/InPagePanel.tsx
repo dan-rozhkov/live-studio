@@ -29,9 +29,11 @@ import { Panel } from './Panel/Panel';
 import type { TabDef } from './Panel/Panel';
 import { Overlays } from './Overlays/Overlays';
 import { DragControls } from './Overlays/DragControls';
+import { Measures } from './Overlays/Measures';
 import { DomTree } from './DomTree/DomTree';
 import { useDomOperations, DomContextMenu, ActionBar } from './DomTree/DomOperations';
 import { PropertiesPanel } from './PropertiesPanel/PropertiesPanel';
+import { DesignMdPanel } from './DesignMdPanel/DesignMdPanel';
 import { ChatPanel, ChatActions } from './ChatPanel/ChatPanel';
 import { QuestionPopover } from './QuestionPopover';
 
@@ -46,6 +48,7 @@ const NAVIGATOR_TABS: TabDef[] = [
 
 const INSPECTOR_TABS: TabDef[] = [
   { id: 'design', label: 'Design' },
+  { id: 'design-md', label: 'DESIGN.md' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -134,16 +137,18 @@ export function InPagePanel() {
   const navigatorOpen = useStore((s) => s.panels.navigator.open);
   const navigatorTab = useStore((s) => s.panels.navigator.activeTab);
   const inspectorOpen = useStore((s) => s.panels.inspector.open);
+  const inspectorTab = useStore((s) => s.panels.inspector.activeTab);
   const selectedNodeId = useStore((s) => s.selectedNodeId);
   const question = useStore((s) => s.question);
   const setHoveredNodeId = useStore((s) => s.setHoveredNodeId);
 
-  // Close the inspector panel when nothing is selected
+  // Close the inspector when nothing is selected — but only on the Design tab.
+  // The DESIGN.md tab is a project-wide view and should stay open regardless.
   useEffect(() => {
-    if (selectedNodeId === null && inspectorOpen) {
+    if (selectedNodeId === null && inspectorOpen && inspectorTab === 'design') {
       useStore.getState().setPanelOpen('inspector', false);
     }
-  }, [selectedNodeId, inspectorOpen]);
+  }, [selectedNodeId, inspectorOpen, inspectorTab]);
 
   // ── 3. Panel callbacks ──────────────────────────────────────────────
 
@@ -195,6 +200,7 @@ export function InPagePanel() {
       {/* Overlays + DragControls — always rendered, self-manage visibility */}
       <Overlays />
       <DragControls />
+      <Measures />
 
       {/* Navigator Panel (Elements tree + Chat) */}
       {navigatorOpen && (
@@ -227,7 +233,7 @@ export function InPagePanel() {
           tabs={INSPECTOR_TABS}
           onClose={handleCloseInspector}
         >
-          <PropertiesPanel />
+          {inspectorTab === 'design-md' ? <DesignMdPanel /> : <PropertiesPanel />}
         </Panel>
       )}
 

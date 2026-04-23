@@ -1,7 +1,8 @@
 // CLI install command — writes .mcp.json + skill files
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
-import { join, resolve } from "path";
+import { join } from "path";
 import { SKILL_CONTENT } from "./skill.js";
+import { findProjectRoot } from "./project-root.js";
 
 /** Prefer local binary over npx for faster startup. */
 function getMcpEntry(root: string): { command: string; args: string[] } {
@@ -20,16 +21,6 @@ const dim = (s: string) => `${ESC}2m${s}${reset}`;
 const green = (s: string) => `${ESC}32m${s}${reset}`;
 const cyan = (s: string) => `${ESC}36m${s}${reset}`;
 const yellow = (s: string) => `${ESC}33m${s}${reset}`;
-
-/** Walk up from cwd to find the nearest directory containing package.json */
-function findProjectRoot(): string {
-  let dir = process.cwd();
-  while (dir !== "/") {
-    if (existsSync(join(dir, "package.json"))) return dir;
-    dir = resolve(dir, "..");
-  }
-  return process.cwd();
-}
 
 /** Write or merge .mcp.json — preserves existing servers */
 function writeMcpConfig(configFile: string, root: string): void {

@@ -1,6 +1,9 @@
 // DevToolsBridge — WebSocket server for browser <-> MCP communication
 
 import { WebSocketServer, WebSocket } from "ws";
+import { readFile } from "fs/promises";
+import { watch, type FSWatcher } from "fs";
+import { join } from "path";
 
 /** Shape of a single style/DOM change coming from the browser editor. */
 export interface Change {
@@ -82,6 +85,13 @@ export class DevToolsBridge {
   private lastBroadcastedPolling: boolean | null = null;
 
   private pingInterval: ReturnType<typeof setInterval> | null = null;
+
+  /** DESIGN.md file tracking. */
+  private designMdPath: string | null = null;
+  private designMdDirWatcher: FSWatcher | null = null;
+  private designMdWatcher: FSWatcher | null = null;
+  private designMdDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private designMdContent: string | null = null;
 
   private readonly port: number;
 
@@ -168,6 +178,16 @@ export class DevToolsBridge {
 
       // Immediately tell the new client the current polling state.
       ws.send(JSON.stringify({ type: "polling", active: this.pollingActive }));
+
+      // Send current DESIGN.md state so the tab has data without a round-trip.
+      if (this.designMdPath) {
+        ws.send(
+          JSON.stringify({
+            type: "design-md",
+            content: this.designMdContent,
+          })
+        );
+      }
 
       ws.on("pong", () => {
         alive.isAlive = true;
@@ -271,7 +291,97 @@ export class DevToolsBridge {
         this.onUpdate?.(msg.changes);
         break;
       }
+
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // DESIGN.md — watch a project root file and broadcast its contents
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Start watching `<projectRoot>/DESIGN.md`. Broadcasts changes to all clients
+   * with a short debounce. Safe to call before the WS server is listening —
+   * broadcasts are no-ops until clients connect.
+   */
+  watchDesignMd(projectRoot: string): void {
+    this.unwatchDesignMd();
+    this.designMdPath = join(projectRoot, "DESIGN.md");
+
+    void this.readDesignMd();
+
+    // Watch the file itself (if it exists) and the directory (to catch creates).
+    try {
+      this.designMdDirWatcher = watch(projectRoot, (_event, filename) => {
+        if (!filename || filename.toString() !== "DESIGN.md") return;
+        this.scheduleDesignMdReload();
+      });
+    } catch {
+      // Some filesystems (e.g. certain CI envs) don't support dir watches.
+    }
+  }
+
+  private scheduleDesignMdReload(): void {
+    if (this.designMdDebounceTimer) clearTimeout(this.designMdDebounceTimer);
+    this.designMdDebounceTimer = setTimeout(() => {
+      this.designMdDebounceTimer = null;
+      void this.readDesignMd();
+    }, 150);
+  }
+
+  private async readDesignMd(): Promise<void> {
+    const path = this.designMdPath;
+    if (!path) return;
+
+    let content: string | null = null;
+    try {
+      content = await readFile(path, "utf-8");
+      this.ensureFileWatcher();
+    } catch {
+      // File doesn't exist or unreadable — broadcast null.
+      if (this.designMdWatcher) {
+        this.designMdWatcher.close();
+        this.designMdWatcher = null;
+      }
+    }
+
+    if (content === this.designMdContent) return;
+    this.designMdContent = content;
+    this.broadcastDesignMd();
+  }
+
+  private ensureFileWatcher(): void {
+    if (this.designMdWatcher || !this.designMdPath) return;
+    try {
+      this.designMdWatcher = watch(this.designMdPath, () => {
+        this.scheduleDesignMdReload();
+      });
+    } catch {
+      // No-op; dir watcher will still catch changes.
+    }
+  }
+
+  private unwatchDesignMd(): void {
+    if (this.designMdDebounceTimer) {
+      clearTimeout(this.designMdDebounceTimer);
+      this.designMdDebounceTimer = null;
+    }
+    if (this.designMdWatcher) {
+      this.designMdWatcher.close();
+      this.designMdWatcher = null;
+    }
+    if (this.designMdDirWatcher) {
+      this.designMdDirWatcher.close();
+      this.designMdDirWatcher = null;
+    }
+  }
+
+  /** Broadcast the currently cached DESIGN.md to all connected clients. */
+  broadcastDesignMd(): void {
+    this.broadcast({
+      type: "design-md",
+      content: this.designMdContent,
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -549,6 +659,8 @@ export class DevToolsBridge {
       waiter.resolve(null);
     }
     this.waitingResolvers = [];
+
+    this.unwatchDesignMd();
 
     this.wss?.close();
     this.wss = null;

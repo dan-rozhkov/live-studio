@@ -203,4 +203,113 @@ Always implement based on the existing codebase styles. For instance, if an elem
 ### Responsive styles
 
 The \`viewport\` field tells you the screen size the user is editing at. Consider this when deciding where to apply style changes.
+
+## Generating DESIGN.md
+
+Live Studio renders a **DESIGN.md** tab in the Inspector panel that visualizes the project's design tokens. The file follows the [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec: YAML front matter with tokens + markdown body with rationale.
+
+When the user asks to "create a DESIGN.md", "generate design tokens", "extract the design system", or similar, produce \`DESIGN.md\` **at the project root** following these rules.
+
+### Source of truth
+
+Inspect the actual codebase before inventing tokens:
+
+1. Tailwind config (\`tailwind.config.{js,ts,cjs,mjs}\`) — \`theme\` and \`theme.extend\`.
+2. CSS custom properties — \`:root\` blocks in global stylesheets.
+3. Component styles — recurring colors, radii, and spacings.
+4. Existing typography — font-family imports and \`h1\`–\`h6\` rules.
+
+Use token names that already exist in the code (e.g. \`primary\`, \`surface\`, \`accent\`) instead of inventing new ones.
+
+### Required structure
+
+- YAML front matter between \`---\` delimiters comes first.
+- Markdown sections after, in this canonical order (omit what doesn't apply): \`Overview\`, \`Colors\`, \`Typography\`, \`Layout\`, \`Elevation & Depth\`, \`Shapes\`, \`Components\`, \`Do's and Don'ts\`.
+- Token references use \`{path.to.token}\` syntax (e.g. \`{colors.primary}\`).
+
+### Token schema
+
+\`\`\`yaml
+---
+name: <string>                 # required
+description: <string>          # optional
+version: alpha                 # optional
+colors:
+  <token>: "#RRGGBB"           # hex sRGB
+typography:
+  <token>:
+    fontFamily: <string>
+    fontSize: <dimension>      # e.g. 1rem, 16px
+    fontWeight: <number>
+    lineHeight: <dimension|number>
+    letterSpacing: <dimension>
+rounded:
+  sm: <dimension>
+  md: <dimension>
+  lg: <dimension>
+spacing:
+  xs: <dimension>
+  sm: <dimension>
+  md: <dimension>
+components:
+  <name>:
+    <property>: <value or {token.ref}>
+---
+\`\`\`
+
+### Template to follow
+
+\`\`\`markdown
+---
+name: Acme
+description: Primary brand system for the marketing site.
+colors:
+  primary: "#1A1C1E"
+  surface: "#F7F5F2"
+  accent: "#B8422E"
+typography:
+  h1:
+    fontFamily: Inter
+    fontSize: 3rem
+    fontWeight: 700
+    lineHeight: 1.1
+  body-md:
+    fontFamily: Inter
+    fontSize: 1rem
+    lineHeight: 1.5
+rounded:
+  sm: 4px
+  md: 8px
+  lg: 16px
+spacing:
+  xs: 4px
+  sm: 8px
+  md: 16px
+  lg: 24px
+components:
+  button-primary:
+    background: "{colors.primary}"
+    color: "{colors.surface}"
+    radius: "{rounded.md}"
+---
+
+## Overview
+Short description of the design intent — mood, references, principles.
+
+## Colors
+Notes on palette roles and when to use which color.
+
+## Typography
+Notes on typographic hierarchy and pairings.
+
+## Do's and Don'ts
+- Do keep accent usage below 10% of any screen.
+- Don't use \`colors.primary\` for destructive actions.
+\`\`\`
+
+### After generating
+
+1. Write the file to \`DESIGN.md\` in the project root.
+2. The Live Studio WebSocket watcher picks up changes automatically and refreshes the DESIGN.md tab in the Inspector — no user action needed.
+3. If you mutated other files (e.g. updated CSS variables to align with tokens), report the diff as usual.
 `;
