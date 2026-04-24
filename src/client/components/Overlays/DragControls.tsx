@@ -15,9 +15,14 @@
 
 import { useEffect, useRef } from 'preact/hooks';
 import { useStore } from '../../state/store';
-import { useUndoStore, type UndoOp } from '../../hooks/use-undo';
 import { getElementById } from '../../bridge/dom-bridge';
 import { refreshIfSelected } from '../../utils/select-node';
+import {
+  commitEditCommand,
+  commitEditCommands,
+  createStyleCommand,
+  type EditCommand,
+} from '../../utils/edit-command';
 import type { DomNode } from '../../state/slices/dom-slice';
 
 // ---------------------------------------------------------------------------
@@ -1067,19 +1072,13 @@ export function DragControls() {
         if (activeTarget?.selector && activeTarget.el.isConnected) {
           const { el, nodeId, selector, initialValues } = activeTarget;
           const cs = getComputedStyle(el);
-          const undoOps: UndoOp[] = [];
+          const commands: EditCommand[] = [];
 
           const prop = `${propertyBase}-${side}`;
           const newVal = cs.getPropertyValue(prop);
           const oldVal = initialValues[prop] || '0px';
           if (newVal !== oldVal) {
-            useStore.getState().queueEdit({
-              type: 'style',
-              element: selector,
-              name: prop,
-              value: `${oldVal} \u2192 ${newVal}`,
-            });
-            undoOps.push({ type: 'style', nodeId, property: prop, oldValue: oldVal, newValue: newVal });
+            commands.push(createStyleCommand({ nodeId, selector, property: prop, oldValue: oldVal, newValue: newVal }));
             initialValues[prop] = newVal;
           }
 
@@ -1087,18 +1086,11 @@ export function DragControls() {
           const newOppVal = cs.getPropertyValue(oppProp);
           const oldOppVal = initialValues[oppProp] || '0px';
           if (newOppVal !== oldOppVal) {
-            useStore.getState().queueEdit({
-              type: 'style',
-              element: selector,
-              name: oppProp,
-              value: `${oldOppVal} \u2192 ${newOppVal}`,
-            });
-            undoOps.push({ type: 'style', nodeId, property: oppProp, oldValue: oldOppVal, newValue: newOppVal });
+            commands.push(createStyleCommand({ nodeId, selector, property: oppProp, oldValue: oldOppVal, newValue: newOppVal }));
             initialValues[oppProp] = newOppVal;
           }
 
-          if (undoOps.length === 1) useUndoStore.getState().push(undoOps[0]);
-          else if (undoOps.length > 1) useUndoStore.getState().pushBatch(undoOps);
+          commitEditCommands(commands);
 
           refreshIfSelected(useStore.getState().selectedNodeId);
         }
@@ -1198,19 +1190,13 @@ export function DragControls() {
           const newVal = (el as HTMLElement).style.gap || getComputedStyle(el).gap;
           const oldVal = initialValues['gap'] || '0px';
           if (newVal !== oldVal) {
-            useStore.getState().queueEdit({
-              type: 'style',
-              element: selector,
-              name: 'gap',
-              value: `${oldVal} \u2192 ${newVal}`,
-            });
-            useUndoStore.getState().push({
-              type: 'style',
+            commitEditCommand(createStyleCommand({
               nodeId,
               property: 'gap',
+              selector,
               oldValue: oldVal,
               newValue: newVal,
-            });
+            }));
             initialValues['gap'] = newVal;
           }
           refreshIfSelected(useStore.getState().selectedNodeId);
@@ -1274,19 +1260,13 @@ export function DragControls() {
           const newVal = cs.getPropertyValue(prop);
           const oldVal = initialValues[prop] ?? '';
           if (newVal !== oldVal) {
-            useStore.getState().queueEdit({
-              type: 'style',
-              element: selector,
-              name: prop,
-              value: `${oldVal} \u2192 ${newVal}`,
-            });
-            useUndoStore.getState().push({
-              type: 'style',
+            commitEditCommand(createStyleCommand({
               nodeId,
               property: prop,
+              selector,
               oldValue: oldVal,
               newValue: newVal,
-            });
+            }));
             initialValues[prop] = newVal;
           }
           refreshIfSelected(useStore.getState().selectedNodeId);
@@ -1365,19 +1345,13 @@ export function DragControls() {
           const newVal = (el as HTMLElement).style.borderRadius || getComputedStyle(el).borderRadius;
           const oldVal = initialValues['border-radius'] || '0px';
           if (newVal !== oldVal) {
-            useStore.getState().queueEdit({
-              type: 'style',
-              element: selector,
-              name: 'border-radius',
-              value: `${oldVal} \u2192 ${newVal}`,
-            });
-            useUndoStore.getState().push({
-              type: 'style',
+            commitEditCommand(createStyleCommand({
               nodeId,
               property: 'border-radius',
+              selector,
               oldValue: oldVal,
               newValue: newVal,
-            });
+            }));
             initialValues['border-radius'] = newVal;
           }
           refreshIfSelected(useStore.getState().selectedNodeId);

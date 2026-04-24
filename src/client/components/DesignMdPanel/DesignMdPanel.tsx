@@ -1,6 +1,5 @@
 import { h } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
-import { marked } from 'marked';
 import { ChevronRight, Clipboard, Check, AlertTriangle } from 'lucide-preact';
 import { useStore } from '../../state/store';
 import {
@@ -11,6 +10,7 @@ import {
   type DesignMdDoc,
   type TypographyToken,
 } from './design-md-parse';
+import { renderSafeMarkdown } from '../../utils/markdown';
 import type { JSX } from 'preact';
 import styles from './DesignMdPanel.module.css';
 
@@ -307,10 +307,7 @@ function SpacingSection({ doc }: { doc: DesignMdDoc }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function MarkdownBody({ body }: { body: string }) {
-  const html = useMemo(
-    () => marked.parse(body, { async: false, breaks: false, gfm: true }) as string,
-    [body],
-  );
+  const html = useMemo(() => renderSafeMarkdown(body), [body]);
   return (
     <Section title="Notes" defaultOpen={false}>
       <div class={styles.markdown} dangerouslySetInnerHTML={{ __html: html }} />
