@@ -23,6 +23,8 @@ export interface StylesSlice {
   setComputedStyles: (styles: Record<string, string>) => void;
   setParentDisplay: (display: string) => void;
   setDesignTokens: (tokens: DesignToken[]) => void;
+  addDesignToken: (token: DesignToken) => void;
+  createDesignToken: (name: string, value: string) => void;
   setElementVariables: (vars: DesignToken[]) => void;
   updateProperty: (name: string, value: string) => void;
   setSelectedAttributes: (attrs: Record<string, string>) => void;
@@ -63,6 +65,31 @@ export const createStylesSlice = (set: ImmerSet, get: GetState): StylesSlice => 
     set((state) => {
       state.designTokens = tokens;
     }),
+
+  addDesignToken: (token) =>
+    set((state) => {
+      const existing = state.designTokens.findIndex((t) => t.name === token.name);
+      if (existing >= 0) {
+        if (state.designTokens[existing].value === token.value) return;
+        state.designTokens[existing] = token;
+      } else {
+        state.designTokens.push(token);
+      }
+    }),
+
+  createDesignToken: (name, value) => {
+    const clean = name.trim().replace(/^-+/, '');
+    const val = value.trim();
+    if (!clean || !val) return;
+    document.documentElement.style.setProperty(`--${clean}`, val);
+    get().addDesignToken({ name: clean, value: val });
+    (get() as StylesSlice & { queueEdit?: (c: unknown) => void }).queueEdit?.({
+      type: 'style',
+      element: ':root',
+      name: `--${clean}`,
+      value: `→ ${val}`,
+    });
+  },
 
   setElementVariables: (vars) =>
     set((state) => {

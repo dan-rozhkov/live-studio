@@ -34,6 +34,7 @@ import { DomTree } from './DomTree/DomTree';
 import { useDomOperations, DomContextMenu, ActionBar } from './DomTree/DomOperations';
 import { PropertiesPanel } from './PropertiesPanel/PropertiesPanel';
 import { DesignMdPanel } from './DesignMdPanel/DesignMdPanel';
+import { VariablesPanel } from './VariablesPanel/VariablesPanel';
 import { ChatPanel, ChatActions } from './ChatPanel/ChatPanel';
 import { QuestionPopover } from './QuestionPopover';
 
@@ -48,8 +49,15 @@ const NAVIGATOR_TABS: TabDef[] = [
 
 const INSPECTOR_TABS: TabDef[] = [
   { id: 'design', label: 'Design' },
+  { id: 'variables', label: 'Variables' },
   { id: 'design-md', label: 'DESIGN.md' },
 ];
+
+const INSPECTOR_CONTENT: Record<string, () => h.JSX.Element> = {
+  design: PropertiesPanel,
+  variables: VariablesPanel,
+  'design-md': DesignMdPanel,
+};
 
 // ---------------------------------------------------------------------------
 // InPagePanel
@@ -233,7 +241,10 @@ export function InPagePanel() {
           tabs={INSPECTOR_TABS}
           onClose={handleCloseInspector}
         >
-          {inspectorTab === 'design-md' ? <DesignMdPanel /> : <PropertiesPanel />}
+          {(() => {
+            const Content = INSPECTOR_CONTENT[inspectorTab] ?? PropertiesPanel;
+            return <Content />;
+          })()}
         </Panel>
       )}
 

@@ -1,0 +1,73 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--cs-font);
+  font-size: 12px;
+  color: var(--cs-foreground);
+  height: 100%;
+  padding: 8px;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar > :global(input) {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+
+.typeSelect {
+  background: var(--cs-input-bg);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font);
+  font-size: 12px;
+  height: 24px;
+  padding: 0 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+.typeSelect:hover {
+  border-color: var(--cs-input-border);
+}
+
+.typeSelect:focus {
+  border-color: var(--cs-accent);
+}
+
+.createForm {
+  flex-shrink: 0;
+  padding: 8px;
+  border: 1px solid var(--cs-input-border);
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.createNewTop {
+  border-top: none !important;
+  margin-top: 0 !important;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.list::-webkit-scrollbar {
+  width: 4px;
+  background: none;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}

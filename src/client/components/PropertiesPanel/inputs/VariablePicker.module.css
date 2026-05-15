@@ -148,3 +148,89 @@
   padding: 8px;
   text-align: center;
 }
+
+.createNew {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--cs-input-border);
+  margin-top: 4px;
+  padding: 6px 8px;
+  color: var(--cs-feint-text);
+  font-family: var(--cs-font);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 3px;
+  text-align: left;
+}
+
+.createNew:hover {
+  background: var(--cs-feint);
+  color: var(--cs-foreground);
+}
+
+.createRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--cs-input-bg);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0 4px;
+  height: 24px;
+  margin-bottom: 4px;
+}
+
+.createRow:focus-within {
+  border-bottom-color: var(--cs-accent);
+}
+
+.createPrefix {
+  color: var(--cs-feint-text);
+  font-family: var(--cs-font);
+  font-size: 12px;
+}
+
+.createName {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--cs-foreground);
+  font-family: var(--cs-font);
+  font-size: 12px;
+  min-width: 0;
+}
+
+.createActions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.createCancel,
+.createSubmit {
+  font-family: var(--cs-font);
+  font-size: 12px;
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  border: 1px solid var(--cs-input-border);
+  background: none;
+  color: var(--cs-foreground);
+}
+
+.createSubmit {
+  background: var(--cs-accent);
+  border-color: var(--cs-accent);
+  color: white;
+}
+
+.createSubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

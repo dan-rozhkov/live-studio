@@ -1,34 +1,13 @@
 import { h } from 'preact';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'preact/hooks';
 import type { JSX } from 'preact';
-import { Diamond } from 'lucide-preact';
+import { Diamond, Plus } from 'lucide-preact';
 import { useStore } from '../../../state/store';
+import { isColorValue, isNumericValue } from '../../../utils/css-value';
+import { CreateVariableForm } from './CreateVariableForm';
 import styles from './VariablePicker.module.css';
 
-/** Check whether a CSS value looks like a color. */
-function isColorValue(value: string): boolean {
-  const v = value.trim().toLowerCase();
-  if (v.startsWith('#')) return true;
-  if (v.startsWith('rgb')) return true;
-  if (v.startsWith('hsl')) return true;
-  if (v.startsWith('lch')) return true;
-  if (v.startsWith('oklch')) return true;
-  if (v.startsWith('lab')) return true;
-  if (v.startsWith('oklab')) return true;
-  if (v.startsWith('color(')) return true;
-  const named = [
-    'red', 'blue', 'green', 'white', 'black', 'orange', 'yellow', 'purple',
-    'pink', 'cyan', 'magenta', 'transparent', 'currentcolor', 'inherit',
-  ];
-  return named.includes(v);
-}
-
 export type VariableFilter = 'color' | 'number' | 'any';
-
-/** Check whether a resolved value looks numeric (e.g. "16px", "1.5rem", "0"). */
-function isNumericValue(value: string): boolean {
-  return /^-?[\d.]+\s*(px|rem|em|%|vw|vh|vmin|vmax|ch|ex|pt|cm|mm|in|s|ms|deg|rad|turn)?$/.test(value.trim());
-}
 
 /* ── Dropdown panel (position: fixed, same pattern as ColorPicker popover) ── */
 
@@ -43,6 +22,7 @@ function VariableDropdown({ anchorRect, filter, onSelect, onClose }: VariableDro
   const designTokens = useStore((s) => s.designTokens);
   const [search, setSearch] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [creating, setCreating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -69,9 +49,6 @@ function VariableDropdown({ anchorRect, filter, onSelect, onClose }: VariableDro
     : anchorRect.top - MAX_HEIGHT - GAP;
   const left = Math.max(GAP, anchorRect.right - 240);
 
-  // No autofocus — avoids scroll/layout disruption in the panel
-
-  // Reset active index when filter changes
   useEffect(() => {
     setActiveIndex(0);
   }, [filtered]);
@@ -122,6 +99,19 @@ function VariableDropdown({ anchorRect, filter, onSelect, onClose }: VariableDro
     [filtered, activeIndex, onSelect],
   );
 
+  if (creating) {
+    return (
+      <div ref={dropdownRef} class={styles.dropdown} style={{ top, left }}>
+        <CreateVariableForm
+          initialName={search}
+          useMouseDown
+          onCancel={() => setCreating(false)}
+          onCreated={(name) => { setCreating(false); onSelect(name); }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div ref={dropdownRef} class={styles.dropdown} style={{ top, left }}>
       <input
@@ -157,6 +147,13 @@ function VariableDropdown({ anchorRect, filter, onSelect, onClose }: VariableDro
           </button>
         ))
       )}
+      <button
+        class={styles.createNew}
+        onMouseDown={(e) => { e.preventDefault(); setCreating(true); }}
+      >
+        <Plus size={12} />
+        <span>New variable{search ? `: ${search}` : ''}</span>
+      </button>
     </div>
   );
 }
@@ -173,7 +170,6 @@ export interface VariablePickerProps {
 }
 
 export function VariablePicker({ value, onChange, filter = 'any' }: VariablePickerProps) {
-  const designTokens = useStore((s) => s.designTokens);
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const anchorRectRef = useRef<DOMRect | null>(null);
@@ -200,8 +196,6 @@ export function VariablePicker({ value, onChange, filter = 'any' }: VariablePick
   const handleClose = useCallback(() => {
     setIsOpen(false);
   }, []);
-
-  if (designTokens.length === 0) return null;
 
   return (
     <div class={styles.wrapper}>
