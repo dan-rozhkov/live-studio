@@ -2,9 +2,10 @@
 // DomOperations — context menu + action bar for DOM tree operations
 // ---------------------------------------------------------------------------
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Copy, Trash2, SquarePlus, ListPlus } from 'lucide-preact';
 import { useStore } from '../../state/store';
+import { ContextMenu, type MenuItem } from '../ContextMenu';
 import {
   getElementById,
   assignId,
@@ -375,81 +376,6 @@ export function useDomOperations() {
   };
 }
 
-// ── ContextMenu component ──
-
-interface ContextMenuItem {
-  label: string;
-  onClick: () => void;
-  shortcut?: string;
-  danger?: boolean;
-  separator?: boolean;
-}
-
-interface ContextMenuProps {
-  x: number;
-  y: number;
-  items: ContextMenuItem[];
-  onClose: () => void;
-}
-
-function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Escape to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  // Clamp to viewport bounds
-  const posRef = useRef({ x, y });
-  posRef.current = { x, y };
-  useEffect(() => {
-    const el = menuRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const maxX = window.innerWidth - rect.width - 4;
-    const maxY = window.innerHeight - rect.height - 4;
-    if (posRef.current.x > maxX) el.style.left = `${maxX}px`;
-    if (posRef.current.y > maxY) el.style.top = `${maxY}px`;
-  }, []);
-
-  return (
-    <>
-      <div className={styles.backdrop} onMouseDown={onClose} />
-      <div
-        ref={menuRef}
-        className={styles.menu}
-        style={{ left: x, top: y }}
-      >
-        {items.map((item, i) => {
-          if (item.separator) {
-            return <div key={`sep-${i}`} className={styles.separator} />;
-          }
-          return (
-            <button
-              key={item.label}
-              className={`${styles.item} ${item.danger ? styles.danger : ''}`}
-              onClick={() => {
-                item.onClick();
-                onClose();
-              }}
-            >
-              <span>{item.label}</span>
-              {item.shortcut && (
-                <span className={styles.shortcut}>{item.shortcut}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
 // ── DomContextMenu — renders contextMenu state into a portal-like overlay ──
 
 interface DomContextMenuProps {
@@ -474,18 +400,18 @@ export function DomContextMenu({
   const selectedNodeIds = useStore((s) => s.selectedNodeIds);
   const isMulti = selectedNodeIds.length > 1;
 
-  const items: ContextMenuItem[] = isMulti
+  const items: MenuItem[] = isMulti
     ? [
-        { label: `Duplicate ${selectedNodeIds.length} elements`, onClick: onDuplicate, shortcut: '\u2318D' },
-        { label: '', onClick: () => {}, separator: true },
-        { label: `Delete ${selectedNodeIds.length} elements`, onClick: onDelete, danger: true, shortcut: '\u2326' },
+        { label: `Duplicate ${selectedNodeIds.length} elements`, onSelect: onDuplicate, shortcut: '\u2318D' },
+        { type: 'separator' },
+        { label: `Delete ${selectedNodeIds.length} elements`, onSelect: onDelete, danger: true, shortcut: '\u2326' },
       ]
     : [
-        { label: 'Add child element', onClick: onAddChild },
-        { label: 'Add sibling element', onClick: onAddSibling },
-        { label: 'Duplicate element', onClick: onDuplicate, shortcut: '\u2318D' },
-        { label: '', onClick: () => {}, separator: true },
-        { label: 'Delete element', onClick: onDelete, danger: true, shortcut: '\u2326' },
+        { label: 'Add child element', onSelect: onAddChild },
+        { label: 'Add sibling element', onSelect: onAddSibling },
+        { label: 'Duplicate element', onSelect: onDuplicate, shortcut: '\u2318D' },
+        { type: 'separator' },
+        { label: 'Delete element', onSelect: onDelete, danger: true, shortcut: '\u2326' },
       ];
 
   return (

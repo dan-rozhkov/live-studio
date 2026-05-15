@@ -37,6 +37,7 @@ import { DesignMdPanel } from './DesignMdPanel/DesignMdPanel';
 import { VariablesPanel } from './VariablesPanel/VariablesPanel';
 import { ChatPanel, ChatActions } from './ChatPanel/ChatPanel';
 import { QuestionPopover } from './QuestionPopover';
+import { ContextMenuRoot } from './ContextMenu';
 
 // ---------------------------------------------------------------------------
 // Tab definitions
@@ -257,6 +258,9 @@ export function InPagePanel() {
         onDuplicate={domOps.handleDuplicateElement}
         onDelete={domOps.handleDeleteElement}
       />
+
+      {/* Global context menu — driven by useContextMenu hook from any element */}
+      <ContextMenuRoot />
 
       {/* Question popover — shown when agent asks a question */}
       {question && (
