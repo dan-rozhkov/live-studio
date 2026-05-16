@@ -11,6 +11,7 @@ import { useCallback, useEffect } from 'preact/hooks';
 
 import { useStore } from '../state/store';
 import { selectAndFetchStyles } from '../utils/select-node';
+import { getElementById, buildElementSelector } from '../bridge/dom-bridge';
 
 // Hooks
 import { usePageBridge } from '../hooks/use-page-bridge';
@@ -30,6 +31,7 @@ import type { TabDef } from './Panel/Panel';
 import { Overlays } from './Overlays/Overlays';
 import { DragControls } from './Overlays/DragControls';
 import { Measures } from './Overlays/Measures';
+import { VariantPicker } from './Overlays/VariantPicker';
 import { DomTree } from './DomTree/DomTree';
 import { useDomOperations, DomContextMenu, ActionBar } from './DomTree/DomOperations';
 import { PropertiesPanel } from './PropertiesPanel/PropertiesPanel';
@@ -74,7 +76,14 @@ export function InPagePanel() {
   useSelectedClickGuard();
 
   // MCP WebSocket connection
-  const { sendEdit, sendAnswer, sendUserMessage } = useMcpDirect();
+  const {
+    sendEdit,
+    sendAnswer,
+    sendUserMessage,
+    sendStartVariant,
+    sendVariantApply,
+    sendVariantCancel,
+  } = useMcpDirect();
 
   // ── Shared select-node callback ──────────────────────────────────────
 
@@ -118,6 +127,21 @@ export function InPagePanel() {
   useInlineEdit(handleInlineEditComplete, handleSelectNode);
 
   const takeScreenshot = useScreenshot();
+
+  const requestVariantsForSelection = useCallback(
+    (nodeId: number | null) => {
+      const store = useStore.getState();
+      if (nodeId === null || store.variant) return;
+      const el = getElementById(nodeId);
+      if (!el) return;
+      sendStartVariant({
+        targetNodeId: nodeId,
+        targetHtml: (el as HTMLElement).outerHTML,
+        selector: buildElementSelector(el),
+      });
+    },
+    [sendStartVariant],
+  );
 
   // Keyboard shortcuts
   useKeyboard({
@@ -183,6 +207,10 @@ export function InPagePanel() {
     [sendUserMessage],
   );
 
+  const handleChatGenerateVariants = useCallback(() => {
+    requestVariantsForSelection(useStore.getState().selectedNodeId);
+  }, [requestVariantsForSelection]);
+
   const handleQuestionAnswer = useCallback(
     (answer: string) => {
       sendAnswer(answer);
@@ -210,6 +238,7 @@ export function InPagePanel() {
       <Overlays />
       <DragControls />
       <Measures />
+      <VariantPicker onApply={sendVariantApply} onCancel={sendVariantCancel} />
 
       {/* Navigator Panel (Elements tree + Chat) */}
       {navigatorOpen && (
@@ -230,7 +259,7 @@ export function InPagePanel() {
             />
           )}
           {navigatorTab === 'chat' && (
-            <ChatPanel onSend={handleChatSend} />
+            <ChatPanel onSend={handleChatSend} onGenerateVariants={handleChatGenerateVariants} />
           )}
         </Panel>
       )}

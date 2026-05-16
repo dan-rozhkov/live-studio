@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { Trash2 } from 'lucide-preact';
+import { Layers2, Trash2 } from 'lucide-preact';
 import type { PendingAttachment } from '../../state/slices/chat-slice';
 import { useStore } from '../../state/store';
 import type { DomNode } from '../../state/slices/dom-slice';
@@ -18,6 +18,7 @@ function findNode(tree: DomNode | null, id: number): DomNode | null {
 
 export interface ChatPanelProps {
   onSend: (text: string, attachments: PendingAttachment[]) => void;
+  onGenerateVariants: () => void;
 }
 
 /**
@@ -30,7 +31,7 @@ export interface ChatPanelProps {
  * - Element attachment support (auto-attaches selected element, manual attachments)
  * - Empty state when no messages exist
  */
-export function ChatPanel({ onSend }: ChatPanelProps) {
+export function ChatPanel({ onSend, onGenerateVariants }: ChatPanelProps) {
   const chatMessages = useStore((s) => s.chatMessages);
   const agentResponding = useStore((s) => s.agentResponding);
   const mcpStatus = useStore((s) => s.mcpStatus);
@@ -40,6 +41,8 @@ export function ChatPanel({ onSend }: ChatPanelProps) {
   const clearPendingAttachments = useStore((s) => s.clearPendingAttachments);
   const selectedNodeIds = useStore((s) => s.selectedNodeIds);
   const domTree = useStore((s) => s.domTree);
+  const variant = useStore((s) => s.variant);
+  const variantsDisabled = !isConnected || selectedNodeIds.length === 0 || variant !== null;
 
   // Auto-attachments: currently selected elements not already in pending
   const autoAttachments = useMemo(() => {
@@ -183,6 +186,15 @@ export function ChatPanel({ onSend }: ChatPanelProps) {
           onKeyDown={handleKeyDown}
           rows={1}
         />
+        <button
+          class={styles.iconButton}
+          disabled={variantsDisabled}
+          onClick={onGenerateVariants}
+          title="Generate AI variants for selection"
+          aria-label="Generate variants"
+        >
+          <Layers2 size={14} />
+        </button>
         <button
           class={styles.sendButton}
           disabled={!isConnected || !inputValue.trim()}

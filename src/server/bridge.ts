@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { readFile } from "fs/promises";
 import { watch, type FSWatcher } from "fs";
 import { join } from "path";
+import { VARIANT_PROMPT } from "./prompts/variant.js";
 
 /** Shape of a single style/DOM change coming from the browser editor. */
 export interface Change {
@@ -27,6 +28,17 @@ export interface UserMessage {
   text: string;
   attachments?: { nodeId: number; label: string }[];
   clientMsgId?: string;
+}
+
+export interface VariantTask {
+  id: string;
+  status: 'queued' | 'dispatched' | 'complete';
+  targetNodeId: number;
+  targetHtml: string;
+  selector: string;
+  prompt: string;
+  result: string | null;
+  createdAt: number;
 }
 
 /** WebSocket with heartbeat tracking. */
@@ -67,6 +79,7 @@ export class DevToolsBridge {
   /** Callbacks the MCP layer can hook into. */
   onUpdate: ((changes: Change[]) => void) | null = null;
   onUserMessage: ((msg: UserMessage) => void) | null = null;
+  onVariantTask: ((task: VariantTask) => void) | null = null;
 
   private ready = false;
   private readyPromise: Promise<void> | null = null;
@@ -92,6 +105,8 @@ export class DevToolsBridge {
   private designMdWatcher: FSWatcher | null = null;
   private designMdDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private designMdContent: string | null = null;
+
+  private activeVariantTask: VariantTask | null = null;
 
   private readonly port: number;
 
@@ -230,6 +245,21 @@ export class DevToolsBridge {
     }, 30_000);
   }
 
+  private enqueueUserMessage(payload: UserMessage): void {
+    if (this.waitingUserMessageResolver) {
+      clearTimeout(this.waitingUserMessageResolver.timer);
+      this.waitingUserMessageResolver.resolve(payload);
+      this.waitingUserMessageResolver = null;
+      if (payload.clientMsgId) {
+        this.broadcast({ type: "user-message-ack", ids: [payload.clientMsgId] });
+      }
+    } else {
+      this.pendingUserMessages.push(payload);
+    }
+    this.flushWaitingResolvers();
+    this.onUserMessage?.(payload);
+  }
+
   private handleMessage(msg: any): void {
     switch (msg.type) {
       case "page-info": {
@@ -260,28 +290,11 @@ export class DevToolsBridge {
       }
 
       case "user-message": {
-        const payload: UserMessage = {
+        this.enqueueUserMessage({
           text: msg.text,
           attachments: msg.attachments,
           clientMsgId: msg.clientMsgId,
-        };
-
-        if (this.waitingUserMessageResolver) {
-          clearTimeout(this.waitingUserMessageResolver.timer);
-          this.waitingUserMessageResolver.resolve(payload);
-          this.waitingUserMessageResolver = null;
-          if (payload.clientMsgId) {
-            this.broadcast({
-              type: "user-message-ack",
-              ids: [payload.clientMsgId],
-            });
-          }
-        } else {
-          this.pendingUserMessages.push(payload);
-        }
-
-        this.flushWaitingResolvers();
-        this.onUserMessage?.(payload);
+        });
         break;
       }
 
@@ -289,6 +302,43 @@ export class DevToolsBridge {
         this.pendingChanges.push(...msg.changes);
         this.flushWaitingResolvers();
         this.onUpdate?.(msg.changes);
+        break;
+      }
+
+      case "start-variant": {
+        try {
+          const task = this.startVariantTask({
+            targetNodeId: msg.targetNodeId,
+            targetHtml: msg.targetHtml,
+            selector: msg.selector,
+            prompt: VARIANT_PROMPT,
+          });
+          this.broadcast({ type: "variant-started", taskId: task.id, targetNodeId: task.targetNodeId });
+          this.onVariantTask?.(task);
+          // Wake any in-flight `get` long-poll so the agent picks up the task
+          // without waiting out the 60s timeout.
+          this.flushWaitingResolvers();
+        } catch (err: any) {
+          this.broadcast({ type: "variant-error", message: err?.message ?? "Failed to start variant task" });
+        }
+        break;
+      }
+
+      case "variant-apply": {
+        const task = this.activeVariantTask;
+        if (!task || task.id !== msg.taskId) {
+          this.broadcast({ type: "variant-error", message: "No matching active variant task" });
+          break;
+        }
+        this.enqueueUserMessage({
+          text: `Apply variant "${msg.variantName}" to ${task.selector}`,
+        });
+        break;
+      }
+
+      case "variant-cancel": {
+        this.clearVariantTask();
+        this.broadcast({ type: "variant-cancelled", taskId: msg.taskId });
         break;
       }
 
@@ -605,6 +655,66 @@ export class DevToolsBridge {
   /** Tell the browser the agent is ready to receive changes. */
   sendReady(): void {
     this.broadcast({ type: "ready" });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Variant tasks
+  // ---------------------------------------------------------------------------
+
+  startVariantTask(payload: {
+    targetNodeId: number;
+    targetHtml: string;
+    selector: string;
+    prompt: string;
+  }): VariantTask {
+    if (this.activeVariantTask) {
+      throw new Error(
+        `Variant task already active (id=${this.activeVariantTask.id}, status=${this.activeVariantTask.status}); call clearVariantTask() first`,
+      );
+    }
+    const task: VariantTask = {
+      id: Math.random().toString(36).slice(2, 10),
+      status: 'queued',
+      targetNodeId: payload.targetNodeId,
+      targetHtml: payload.targetHtml,
+      selector: payload.selector,
+      prompt: payload.prompt,
+      result: null,
+      createdAt: Date.now(),
+    };
+    this.activeVariantTask = task;
+    return task;
+  }
+
+  consumeVariantTask(): VariantTask | null {
+    const task = this.activeVariantTask;
+    if (!task || task.status !== 'queued') return null;
+    task.status = 'dispatched';
+    return task;
+  }
+
+  completeVariantTask(id: string, html: string): boolean {
+    const task = this.activeVariantTask;
+    if (!task || task.id !== id || task.status !== 'dispatched') return false;
+    task.status = 'complete';
+    task.result = html;
+    return true;
+  }
+
+  getActiveVariantTask(): VariantTask | null {
+    return this.activeVariantTask;
+  }
+
+  clearVariantTask(): void {
+    this.activeVariantTask = null;
+  }
+
+  broadcastVariantResult(taskId: string, html: string): void {
+    this.broadcast({ type: "variant-result", taskId, html });
+  }
+
+  broadcastVariantImplemented(taskId: string, variantName: string): void {
+    this.broadcast({ type: "variant-implemented", taskId, variantName });
   }
 
   // ---------------------------------------------------------------------------

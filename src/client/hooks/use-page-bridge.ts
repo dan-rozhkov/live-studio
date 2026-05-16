@@ -12,6 +12,7 @@ import {
   findReplacementElement,
   type DomTreeNode,
 } from '../bridge/dom-bridge';
+import { isVariantSwapInProgress } from '../bridge/variants-bridge';
 import { useStore } from '../state/store';
 import type { DomNode } from '../state/slices/dom-slice';
 
@@ -122,7 +123,9 @@ export function usePageBridge(): void {
 
       // Set up body mutation observer
       const observer = new MutationObserver((mutations) => {
-        // Filter: ignore mutations that only affect our own shadow DOM
+        // Filter: ignore mutations originating from variant-preview swaps
+        if (isVariantSwapInProgress()) return;
+
         const hasRelevantMutation = mutations.some((m) => {
           const target = m.target as Element;
           // Skip mutations inside our panel's shadow DOM

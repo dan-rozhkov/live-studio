@@ -15,7 +15,18 @@ const description =
 
 const args = {
   action: z
-    .enum(["get", "panic", "calm", "ask", "message", "responding", "chat"])
+    .enum([
+      "get",
+      "panic",
+      "calm",
+      "ask",
+      "message",
+      "responding",
+      "chat",
+      "get-variant-task",
+      "variant-result",
+      "variant-implemented",
+    ])
     .default("get")
     .describe("Action to perform"),
   timeout: z
@@ -51,6 +62,18 @@ const args = {
     .describe(
       "Whether the agent is responding (responding action, defaults to true)"
     ),
+  taskId: z
+    .string()
+    .optional()
+    .describe("Variant task id (variant-result / variant-implemented)"),
+  html: z
+    .string()
+    .optional()
+    .describe("Wrapper HTML <live-studio-variants>…</live-studio-variants> (variant-result)"),
+  variantName: z
+    .string()
+    .optional()
+    .describe("Variant data-name that was applied (variant-implemented)"),
 };
 
 // ---------------------------------------------------------------------------
@@ -106,7 +129,7 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
     "live-studio",
     description,
     args,
-    async ({ action, timeout, reason, element, question, options, text, active }) => {
+    async ({ action, timeout, reason, element, question, options, text, active, taskId, html, variantName }) => {
       // --- actions that don't need the bridge ---
       if (action === "panic") {
         bridge.sendPanic(reason ?? "unknown", element);
@@ -152,6 +175,39 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
         return textResult(JSON.stringify(msg));
       }
 
+      if (action === "get-variant-task") {
+        const task = bridge.consumeVariantTask();
+        if (!task) return textResult("No pending variant task.");
+        return textResult(JSON.stringify({
+          taskId: task.id,
+          target: { selector: task.selector, html: task.targetHtml, nodeId: task.targetNodeId },
+          prompt: task.prompt,
+        }));
+      }
+
+      if (action === "variant-result") {
+        if (!taskId || !html) {
+          return errorResult("'variant-result' requires 'taskId' and 'html'.");
+        }
+        const ok = bridge.completeVariantTask(taskId, html);
+        if (!ok) return errorResult("No matching dispatched variant task.");
+        bridge.broadcastVariantResult(taskId, html);
+        return textResult("Variant result delivered.");
+      }
+
+      if (action === "variant-implemented") {
+        if (!taskId || !variantName) {
+          return errorResult("'variant-implemented' requires 'taskId' and 'variantName'.");
+        }
+        const task = bridge.getActiveVariantTask();
+        if (!task || task.id !== taskId) {
+          return errorResult("No matching active variant task.");
+        }
+        bridge.broadcastVariantImplemented(taskId, variantName);
+        bridge.clearVariantTask();
+        return textResult("Variant implementation acknowledged.");
+      }
+
       // --- get (default) ---
       return handleGetAction(bridge, timeout);
     }
@@ -166,13 +222,21 @@ async function handleGetAction(
   content: { type: "text"; text: string }[];
   isError?: true;
 }> {
-  const changes = await bridge.waitForUpdate(timeout, () => {
-    bridge.sendReady();
-  });
+  // A queued variant task takes priority — return immediately without waiting.
+  let queuedVariant = bridge.consumeVariantTask();
+
+  const changes = queuedVariant
+    ? bridge.pendingChanges.slice()
+    : await bridge.waitForUpdate(timeout, () => {
+        bridge.sendReady();
+      });
+
+  // Re-check after the long-poll: a task may have been started during the wait.
+  if (!queuedVariant) queuedVariant = bridge.consumeVariantTask();
 
   const messages = bridge.consumeUserMessages();
 
-  if (!changes && messages.length === 0) {
+  if (!queuedVariant && !changes && messages.length === 0) {
     return textResult(
       "No pending updates. Call this tool again to continue waiting."
     );
@@ -188,6 +252,17 @@ async function handleGetAction(
   if (url) response.url = url;
   if (viewport) response.viewport = viewport;
   if (messages.length > 0) response.messages = messages;
+  if (queuedVariant) {
+    response.variantTask = {
+      taskId: queuedVariant.id,
+      target: {
+        selector: queuedVariant.selector,
+        html: queuedVariant.targetHtml,
+        nodeId: queuedVariant.targetNodeId,
+      },
+      prompt: queuedVariant.prompt,
+    };
+  }
 
   return textResult(JSON.stringify(response));
 }
@@ -225,6 +300,16 @@ export async function startServer(port?: number): Promise<void> {
 
   bridge.onUserMessage = (msg) => {
     sendNotification(server, { messages: [msg] });
+  };
+
+  bridge.onVariantTask = (task) => {
+    sendNotification(server, {
+      variantTask: {
+        taskId: task.id,
+        target: { selector: task.selector, html: task.targetHtml, nodeId: task.targetNodeId },
+        prompt: task.prompt,
+      },
+    });
   };
 
   const transport = new StdioServerTransport();

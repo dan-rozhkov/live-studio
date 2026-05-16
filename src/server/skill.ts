@@ -312,4 +312,63 @@ Notes on typographic hierarchy and pairings.
 1. Write the file to \`DESIGN.md\` in the project root.
 2. The Live Studio WebSocket watcher picks up changes automatically and refreshes the DESIGN.md tab in the Inspector — no user action needed.
 3. If you mutated other files (e.g. updated CSS variables to align with tokens), report the diff as usual.
+
+## Variant tasks
+
+In addition to style/text/attr changes, Live Studio can dispatch **variant tasks** — the user asks for AI-generated design alternatives of a selected element. These arrive on a separate channel from regular changes.
+
+### Receiving a variant task
+
+Variant tasks are surfaced through the **same channels you already poll**:
+
+- **Polling:** the regular \`get\` response includes a \`variantTask\` field when one is queued. No extra action needed — your existing \`get\` loop will see it. Server flushes the long-poll immediately when a task is created, so there is no 60s delay.
+- **Channel events:** a \`notifications/claude/channel\` event carries the same \`variantTask\` field for agents that support push notifications.
+
+The payload shape:
+
+\`\`\`json
+{
+    "variantTask": {
+        "taskId": "v_abc123",
+        "target": {
+            "selector": "main > section.hero",
+            "html": "<section class=\\"hero\\">…</section>"
+        },
+        "prompt": "<full subagent prompt — read this verbatim>"
+    }
+}
+\`\`\`
+
+When \`variantTask\` is present in a response, treat it as the top priority and handle it before any other pending changes/messages on that response.
+
+(There is also a dedicated \`live-studio({ action: "get-variant-task" })\` action that returns just the variant payload; you rarely need it because \`get\` already includes \`variantTask\`.)
+
+### Handling the task
+
+1. Read \`payload.prompt\` — it contains the full instructions for the variant subagent (format, \`@scope\` rules, hard "do not" list, wire format). Follow it literally.
+2. Use \`payload.target.html\` as the Original variant content and \`payload.target.selector\` as the locator.
+3. Generate the entire \`<live-studio-variants>\` wrapper in a single response. Do NOT edit any source files at this stage.
+4. Return the wrapper by calling:
+
+\`\`\`
+live-studio({ action: "variant-result", taskId: "<taskId>", html: "<full <live-studio-variants>…</live-studio-variants> string>" })
+\`\`\`
+
+The \`taskId\` must match the one from the payload exactly. \`html\` must be the complete wrapper string with nothing else around it.
+
+### Apply follow-up
+
+After you return the variants, the user picks one in the Studio picker. You will then receive a regular user message (via \`messages\` on the next \`get\`, or via the chat panel) of the form:
+
+  Apply variant "X" to <selector>
+
+On this follow-up turn you DO edit the real source files. Find the variant by \`data-name="X"\` in the wrapper you just returned and translate its \`<style>@scope{…}</style>\` + markup into idiomatic source edits in whatever convention the project uses (Tailwind classes, CSS modules, styled-components, plain stylesheet, etc — match what nearby files do).
+
+When the edits are written to disk, signal completion:
+
+\`\`\`
+live-studio({ action: "variant-implemented", taskId: "<taskId>", variantName: "X" })
+\`\`\`
+
+This tells Live Studio to fold the chosen variant into the DOM and dismiss the picker.
 `;

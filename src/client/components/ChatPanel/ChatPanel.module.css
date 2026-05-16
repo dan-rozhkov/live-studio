@@ -261,6 +261,29 @@
   font-weight: 500;
 }
 
+.iconButton {
+  width: 32px;
+  height: 32px;
+  background: var(--cs-feint);
+  color: var(--cs-foreground);
+  cursor: pointer;
+  border: 1px solid var(--cs-border);
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--cs-feint-solid);
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .sendButton:hover {
   filter: brightness(1.1);
 }

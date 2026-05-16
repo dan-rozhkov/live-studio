@@ -60,7 +60,7 @@ const THEME_CSS = /* css */ `
     --cs-white: var(--ls-text);
     --cs-black: #000;
     --cs-accent: var(--ls-accent);
-    --cs-on-accent: #000;
+    --cs-on-accent: #fff;
     --cs-feint: var(--ls-bg-hover);
     --cs-feint-solid: var(--ls-bg-active);
     --cs-feint-text: var(--ls-text-muted);

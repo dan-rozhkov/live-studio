@@ -93,13 +93,13 @@
 }
 
 .tabActive {
-  color: var(--cs-accent);
-  background: color-mix(in srgb, var(--cs-accent) 12%, var(--cs-layer));
+  color: var(--cs-foreground);
+  background: var(--cs-feint-solid);
 }
 
 .tabActive:hover {
-  color: var(--cs-accent);
-  background: color-mix(in srgb, var(--cs-accent) 12%, var(--cs-layer));
+  color: var(--cs-foreground);
+  background: var(--cs-feint-solid);
   opacity: 0.9;
 }
 

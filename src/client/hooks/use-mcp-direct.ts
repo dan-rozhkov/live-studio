@@ -1,5 +1,11 @@
 import { useEffect, useRef, useCallback } from 'preact/hooks';
 import { useStore } from '../state/store';
+import { getElementById } from '../bridge/dom-bridge';
+import {
+  acceptVariantPreview,
+  cancelVariantPreview,
+  startVariantPreview,
+} from '../bridge/variants-bridge';
 
 /* ── Constants ───────────────────────────────────────────────── */
 
@@ -185,6 +191,58 @@ export function useMcpDirect(mcpPort?: number) {
             store.setAgentResponding(msg.active);
           } else if (msg.type === 'design-md') {
             store.setDesignMd(msg.content ?? null);
+          } else if (msg.type === 'variant-started') {
+            store.setVariant({
+              taskId: msg.taskId,
+              targetNodeId: msg.targetNodeId,
+              phase: 'requested',
+              variantNames: [],
+              activeName: 'Original',
+            });
+          } else if (msg.type === 'variant-result') {
+            const variant = store.variant;
+            if (!variant || variant.taskId !== msg.taskId) return;
+            const target = getElementById(variant.targetNodeId);
+            if (!target) {
+              store.setVariant({
+                ...variant,
+                phase: 'error',
+                errorMessage: 'Target element no longer in DOM',
+              });
+              return;
+            }
+            const preview = startVariantPreview(msg.taskId, target, msg.html);
+            if (!preview) {
+              store.setVariant({
+                ...variant,
+                phase: 'error',
+                errorMessage: 'Malformed variant payload',
+              });
+              return;
+            }
+            store.patchVariant({
+              phase: 'previewing',
+              variantNames: preview.variantNames,
+              activeName: preview.activeName,
+            });
+          } else if (msg.type === 'variant-implemented') {
+            const variant = store.variant;
+            if (!variant || variant.taskId !== msg.taskId) return;
+            acceptVariantPreview();
+            store.setVariant(null);
+          } else if (msg.type === 'variant-error') {
+            const variant = store.variant;
+            cancelVariantPreview();
+            if (variant) {
+              store.setVariant({
+                ...variant,
+                phase: 'error',
+                errorMessage: msg.message,
+              });
+            }
+          } else if (msg.type === 'variant-cancelled') {
+            cancelVariantPreview();
+            store.setVariant(null);
           }
         } catch {
           // Ignore malformed messages
@@ -350,6 +408,42 @@ export function useMcpDirect(mcpPort?: number) {
     connectRef.current();
   }, [editVersion]);
 
+  /* ── Variant task send helpers ───────────────────────────── */
+
+  const sendMessage = useCallback((payload: Record<string, unknown>): boolean => {
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    ws.send(JSON.stringify(payload));
+    return true;
+  }, []);
+
+  const sendStartVariant = useCallback(
+    (payload: { targetNodeId: number; targetHtml: string; selector: string }) => {
+      sendMessage({ type: 'start-variant', ...payload });
+    },
+    [sendMessage],
+  );
+
+  const sendVariantApply = useCallback(
+    (taskId: string, variantName: string) => {
+      const variant = useStore.getState().variant;
+      if (!variant || variant.phase !== 'previewing') return;
+      if (sendMessage({ type: 'variant-apply', taskId, variantName })) {
+        useStore.getState().patchVariant({ phase: 'applying' });
+      }
+    },
+    [sendMessage],
+  );
+
+  const sendVariantCancel = useCallback(
+    (taskId: string) => {
+      sendMessage({ type: 'variant-cancel', taskId });
+      cancelVariantPreview();
+      useStore.getState().setVariant(null);
+    },
+    [sendMessage],
+  );
+
   /* ── Manual reconnect ────────────────────────────────────── */
 
   const reconnect = useCallback(() => {
@@ -361,5 +455,13 @@ export function useMcpDirect(mcpPort?: number) {
     connectRef.current();
   }, []);
 
-  return { sendEdit, sendAnswer, sendUserMessage, reconnect };
+  return {
+    sendEdit,
+    sendAnswer,
+    sendUserMessage,
+    reconnect,
+    sendStartVariant,
+    sendVariantApply,
+    sendVariantCancel,
+  };
 }

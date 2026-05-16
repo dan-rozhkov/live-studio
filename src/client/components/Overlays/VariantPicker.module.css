@@ -1,0 +1,100 @@
+.pill {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--cs-border);
+  background: var(--cs-layer);
+  color: var(--cs-foreground);
+  border-radius: 10px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  box-shadow: var(--ls-shadow-lg);
+}
+
+.button {
+  height: 20px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--cs-foreground);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.button:hover {
+  background: var(--cs-feint);
+}
+
+.button:focus {
+  outline: none;
+}
+
+.button.active {
+  background: var(--cs-accent);
+  color: var(--cs-on-accent, #000);
+}
+
+.button.active:hover {
+  background: var(--cs-accent);
+}
+
+.button.primary {
+  background: var(--cs-accent);
+  color: var(--cs-on-accent, #000);
+}
+
+.button.primary:hover {
+  opacity: 0.85;
+  background: var(--cs-accent);
+}
+
+.button.iconOnly {
+  width: 20px;
+  padding: 0;
+  color: var(--cs-foreground);
+}
+
+.button.iconOnly:hover {
+  background: var(--cs-feint);
+}
+
+.separator {
+  width: 1px;
+  align-self: stretch;
+  background: var(--cs-border);
+  margin: 1px 6px;
+}
+
+.loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 16px;
+  color: var(--cs-secondary-text);
+}
+
+.spinner {
+  animation: ls-variant-spin 0.8s linear infinite;
+}
+
+@keyframes ls-variant-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
