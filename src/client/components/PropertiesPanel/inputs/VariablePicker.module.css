@@ -234,3 +234,9 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.createError {
+  color: var(--cs-error, #d9534f);
+  font-size: 11px;
+  padding: 4px 0 0;
+}

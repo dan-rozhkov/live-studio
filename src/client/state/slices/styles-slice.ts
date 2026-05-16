@@ -78,16 +78,14 @@ export const createStylesSlice = (set: ImmerSet, get: GetState): StylesSlice => 
     }),
 
   createDesignToken: (name, value) => {
-    const clean = name.trim().replace(/^-+/, '');
-    const val = value.trim();
-    if (!clean || !val) return;
-    document.documentElement.style.setProperty(`--${clean}`, val);
-    get().addDesignToken({ name: clean, value: val });
+    // Pre-validated input only — callers must run validateToken first.
+    document.documentElement.style.setProperty(`--${name}`, value);
+    get().addDesignToken({ name, value });
     (get() as StylesSlice & { queueEdit?: (c: unknown) => void }).queueEdit?.({
       type: 'style',
       element: ':root',
-      name: `--${clean}`,
-      value: `→ ${val}`,
+      name: `--${name}`,
+      value: `→ ${value}`,
     });
   },
 
