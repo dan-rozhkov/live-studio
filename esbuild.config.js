@@ -57,7 +57,7 @@ const clientConfig = {
   format: "esm",
   platform: "browser",
   target: "es2022",
-  sourcemap: !isMinify,
+  sourcemap: false,
   minify: isMinify,
   alias: {
     react: "preact/compat",
