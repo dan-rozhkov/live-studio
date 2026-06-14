@@ -94,23 +94,52 @@ export function buildElementSelector(el: Element): string {
 // ---- selector builder (works on DomTreeNode snapshots) --------------------
 
 /**
- * Build a CSS-selector string from a `DomTreeNode` (snapshot data).
+ * The selector builders accept either the bridge's own `DomTreeNode`
+ * (`localName` + `className`) or the store's `DomNode` (`tag`, class folded
+ * into `attributes.class`). Every production caller passes the store shape, so
+ * read both via small accessors instead of assuming one. Reading only
+ * `localName`/`className` against a store node produced "undefined" selectors
+ * (P0.4).
+ */
+type SelectorNode = {
+  localName?: string;
+  tag?: string;
+  className?: string;
+  attributes?: Record<string, string>;
+  children: SelectorNode[];
+};
+
+/** Tag name from either node shape. */
+function nodeTag(node: SelectorNode): string {
+  return node.localName ?? node.tag ?? "";
+}
+
+/** Class string from either node shape (store nodes keep it in attributes). */
+function nodeClassName(node: SelectorNode): string {
+  if (typeof node.className === "string" && node.className) return node.className;
+  const cls = node.attributes?.class;
+  return typeof cls === "string" ? cls : "";
+}
+
+/**
+ * Build a CSS-selector string from a snapshot node (bridge or store shape).
  *
- * Same priority as `buildElementSelector` but operates on plain objects
- * rather than live DOM elements.
+ * Same priority as `buildElementSelector` (id > data-testid > data-id >
+ * classes), but operates on plain objects rather than live DOM elements.
  */
 export function buildSelector(node: DomTreeNode): string {
-  const tag = node.localName;
+  const tag = nodeTag(node);
   const attrs = node.attributes ?? {};
-  if (attrs.id) return `${tag}#${attrs.id}`;
-  if (attrs["data-testid"]) return `${tag}[data-testid="${attrs["data-testid"]}"]`;
-  if (attrs["data-id"]) return `${tag}[data-id="${attrs["data-id"]}"]`;
+  if (attrs.id) return `${tag}#${CSS.escape(attrs.id)}`;
+  if (attrs["data-testid"]) return `${tag}[data-testid="${CSS.escape(attrs["data-testid"])}"]`;
+  if (attrs["data-id"]) return `${tag}[data-id="${CSS.escape(attrs["data-id"])}"]`;
 
-  const classes = node.className
-    ? (typeof node.className === "string" ? node.className : "")
+  const className = nodeClassName(node);
+  const classes = className
+    ? className
         .split(/\s+/)
         .filter(Boolean)
-        .map((c) => `.${c}`)
+        .map((c) => `.${CSS.escape(c)}`)
         .join("")
     : "";
   return `${tag}${classes}`;
@@ -133,7 +162,8 @@ function findAncestorChain(
 
 /** Compute the `:nth-of-type(n)` suffix when `parent` has multiple children with the same tag. */
 function nthOfType(parent: DomTreeNode, node: DomTreeNode): string {
-  const sameTag = parent.children.filter((c) => c.localName === node.localName);
+  const tag = nodeTag(node);
+  const sameTag = parent.children.filter((c) => nodeTag(c) === tag);
   if (sameTag.length <= 1) return "";
   const idx = sameTag.indexOf(node) + 1;
   return `:nth-of-type(${idx})`;
