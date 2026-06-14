@@ -110,6 +110,41 @@ export function parseNumericValue(value: string): { num: number; unit: string } 
   return { num: 0, unit: '' };
 }
 
+/** CSS keywords that are valid in place of a number and must commit verbatim. */
+const COMMIT_KEYWORDS = new Set([
+  'auto', 'inherit', 'initial', 'unset', 'revert',
+  'none', 'fit-content', 'max-content', 'min-content',
+]);
+
+/**
+ * Resolve the text a user typed into the value to commit, or `null` for a
+ * no-op. Guards the P0.7 data-corruption bugs:
+ *
+ * - empty / unrecognised garbage (`''`, `'abc'`) → `null` (don't commit);
+ * - a CSS keyword (`auto`, `inherit`, …) → the keyword as-is, never `autopx`;
+ * - a number that carries its own unit (`2rem`) → kept verbatim, never `2rempx`;
+ * - a bare number (`100`) → number + the field's current unit (`100px`).
+ *
+ * Typed text is preserved (no step-rounding/clamping here — that is for the
+ * slider/stepper paths), so committing an unchanged value is a true no-op.
+ */
+export function commitText(raw: string, fallbackUnit: string): string | null {
+  const text = raw.trim();
+  if (!text) return null;
+
+  const match = text.match(/^(-?\d*\.?\d+)\s*([a-z%]*)$/i);
+  if (match) {
+    const num = parseFloat(match[1]);
+    if (!Number.isFinite(num)) return null;
+    const unit = match[2] || fallbackUnit;
+    return `${num}${unit}`;
+  }
+
+  const keyword = text.toLowerCase();
+  if (COMMIT_KEYWORDS.has(keyword)) return keyword;
+  return null;
+}
+
 interface ResolveOpts {
   label?: string;
   units?: UnitConfig[];
@@ -207,6 +242,9 @@ export function NumberInput({
   const dragStartValue = useRef(0);
   const isEditingRef = useRef(false);
   const hasDragged = useRef(false);
+  // Whether the text field has been edited since focus — blur must not commit
+  // an untouched field (display rounding would corrupt e.g. 12.5px → 13px).
+  const dirtyRef = useRef(false);
 
   useEffect(() => {
     if (!isEditingRef.current) {
@@ -244,19 +282,30 @@ export function NumberInput({
 
   const handleInputChange = useCallback((e: JSX.TargetedEvent<HTMLInputElement>) => {
     isEditingRef.current = true;
+    dirtyRef.current = true;
     setLocalValue((e.target as HTMLInputElement).value);
   }, []);
 
   const handleInputBlur = useCallback(() => {
     isEditingRef.current = false;
-    const committed = commitValue(localValue);
-    if (committed !== value) {
-      onChange(committed);
+    // Never commit an untouched field — only normalise its display.
+    if (!dirtyRef.current) {
+      setLocalValue(displayNumber(value));
+      return;
     }
-  }, [localValue, value, commitValue, onChange]);
+    dirtyRef.current = false;
+    const committed = commitText(localValue, resolvedUnit);
+    if (committed !== null && committed !== value) {
+      onChange(committed);
+    } else {
+      setLocalValue(displayNumber(value));
+    }
+  }, [localValue, value, resolvedUnit, onChange, displayNumber]);
 
   const handleStepBy = useCallback((multiplier: number) => {
-    const num = parseFloat(localValue) + resolvedStep * multiplier;
+    // `|| 0` guards non-numeric bases (e.g. `auto`) — without it `parseFloat`
+    // yields NaN and the field commits `NaNpx`.
+    const num = (parseFloat(localValue) || 0) + resolvedStep * multiplier;
     const display = formatValue(num);
     setLocalValue(display);
     onChange(commitValue(display));
@@ -266,7 +315,9 @@ export function NumberInput({
     (e: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
         isEditingRef.current = false;
-        onChange(commitValue(localValue));
+        dirtyRef.current = false;
+        const committed = commitText(localValue, resolvedUnit);
+        if (committed !== null) onChange(committed);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         handleStepBy(e.shiftKey ? 10 : 1);
@@ -275,11 +326,12 @@ export function NumberInput({
         handleStepBy(e.shiftKey ? -10 : -1);
       }
     },
-    [localValue, commitValue, onChange, handleStepBy],
+    [localValue, resolvedUnit, onChange, handleStepBy],
   );
 
   const handleFocus = useCallback(() => {
     isEditingRef.current = true;
+    dirtyRef.current = false;
     onFocus?.();
   }, [onFocus]);
 
