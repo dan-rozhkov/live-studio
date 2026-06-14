@@ -111,7 +111,12 @@ function sendNotification(
 // Tool handler wiring
 // ---------------------------------------------------------------------------
 
-function initTool(server: McpServer, bridge: DevToolsBridge): void {
+/**
+ * Build the `live-studio` tool handler bound to a bridge. Extracted from
+ * `initTool` (1:1, no behavior change) so the per-action validation/routing can
+ * be unit-tested without constructing an `McpServer`.
+ */
+export function createToolHandler(bridge: DevToolsBridge) {
   async function ensureBridge() {
     if (bridge.isListening) return null;
     bridge.ensureStarted();
@@ -125,11 +130,19 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
     return null;
   }
 
-  server.tool(
-    "live-studio",
-    description,
-    args,
-    async ({ action, timeout, reason, element, question, options, text, active, taskId, html, variantName }) => {
+  return async ({ action, timeout, reason, element, question, options, text, active, taskId, html, variantName }: {
+    action: string;
+    timeout: number;
+    reason?: string;
+    element?: string;
+    question?: string;
+    options?: string[];
+    text?: string;
+    active?: boolean;
+    taskId?: string;
+    html?: string;
+    variantName?: string;
+  }) => {
       // --- actions that don't need the bridge ---
       if (action === "panic") {
         bridge.sendPanic(reason ?? "unknown", element);
@@ -210,12 +223,15 @@ function initTool(server: McpServer, bridge: DevToolsBridge): void {
 
       // --- get (default) ---
       return handleGetAction(bridge, timeout);
-    }
-  );
+  };
+}
+
+function initTool(server: McpServer, bridge: DevToolsBridge): void {
+  server.tool("live-studio", description, args, createToolHandler(bridge) as any);
 }
 
 /** Handle the default 'get' action — poll for changes, messages, url, viewport. */
-async function handleGetAction(
+export async function handleGetAction(
   bridge: DevToolsBridge,
   timeout: number
 ): Promise<{

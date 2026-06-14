@@ -8,6 +8,9 @@ logs
 # Build
 dist/
 
+# Test coverage
+coverage/
+
 # Misc
 .DS_Store
 .fleet
