@@ -54,7 +54,53 @@ export function createDefaultGradient(firstColor?: string): GradientConfig {
   };
 }
 
-const GRADIENT_RE = /^(repeating-)?(linear|radial|conic)-gradient\(\s*([\s\S]*)\s*\)$/i;
+const GRADIENT_HEAD_RE = /^(repeating-)?(linear|radial|conic)-gradient\(/i;
+const ANGLE_RE = /^(-?[\d.]+)(deg|grad|rad|turn)$/;
+
+/** Normalize a CSS angle to degrees, honoring the unit. */
+function angleToDeg(value: number, unit: string): number {
+  switch (unit) {
+    case 'turn': return value * 360;
+    case 'rad': return (value * 180) / Math.PI;
+    case 'grad': return value * 0.9;
+    default: return value; // deg
+  }
+}
+
+/**
+ * Match a SINGLE pure gradient: the gradient function plus its balanced parens
+ * must span the entire trimmed value. Rejects multi-layer values such as
+ * `linear-gradient(...), url(...)` or two stacked gradients that the old greedy
+ * regex swallowed and corrupted (P0.8).
+ */
+function matchGradient(
+  css: string,
+): { repeating: boolean; type: GradientConfig['type']; body: string } | null {
+  const trimmed = css.trim();
+  const head = trimmed.match(GRADIENT_HEAD_RE);
+  if (!head) return null;
+  const openIdx = head[0].length - 1; // index of the opening '('
+  let depth = 0;
+  let closeIdx = -1;
+  for (let i = openIdx; i < trimmed.length; i++) {
+    const ch = trimmed[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') {
+      depth--;
+      if (depth === 0) {
+        closeIdx = i;
+        break;
+      }
+    }
+  }
+  if (closeIdx === -1) return null; // unbalanced
+  if (trimmed.slice(closeIdx + 1).trim() !== '') return null; // trailing layer/junk
+  return {
+    repeating: !!head[1],
+    type: head[2].toLowerCase() as GradientConfig['type'],
+    body: trimmed.slice(openIdx + 1, closeIdx),
+  };
+}
 
 function splitGradientArgs(body: string): string[] {
   const parts: string[] = [];
@@ -128,12 +174,9 @@ function parseStopPart(part: string, index: number, total: number): GradientStop
 }
 
 export function parseGradient(css: string): GradientConfig | null {
-  const trimmed = css.trim();
-  const m = trimmed.match(GRADIENT_RE);
-  if (!m) return null;
-  const repeating = !!m[1];
-  const type = m[2].toLowerCase() as GradientConfig['type'];
-  const body = m[3];
+  const matched = matchGradient(css);
+  if (!matched) return null;
+  const { repeating, type, body } = matched;
   const parts = splitGradientArgs(body);
   let angle = type === 'linear' ? 180 : 0;
   let shape = 'circle';
@@ -145,10 +188,10 @@ export function parseGradient(css: string): GradientConfig | null {
   if (parts.length > 0) {
     const first = parts[0].trim();
     if (type === 'linear') {
-      const angleMatch = first.match(/^([\d.]+)deg$/);
+      const angleMatch = first.match(ANGLE_RE);
       const dirMatch = first.match(/^to\s+(.+)$/);
       if (angleMatch) {
-        angle = parseFloat(angleMatch[1]);
+        angle = angleToDeg(parseFloat(angleMatch[1]), angleMatch[2]);
         stopStartIndex = 1;
       } else if (dirMatch) {
         angle = directionToAngle(dirMatch[1].trim());
@@ -168,9 +211,9 @@ export function parseGradient(css: string): GradientConfig | null {
         stopStartIndex = 1;
       }
     } else if (type === 'conic') {
-      const conicMatch = first.match(/^from\s+([\d.]+)deg/);
+      const conicMatch = first.match(/^from\s+(-?[\d.]+)(deg|grad|rad|turn)/);
       if (conicMatch) {
-        angle = parseFloat(conicMatch[1]);
+        angle = angleToDeg(parseFloat(conicMatch[1]), conicMatch[2]);
         stopStartIndex = 1;
       }
       const atMatch = first.match(/\bat\s+(.+)$/i);
@@ -220,7 +263,7 @@ export function serializeGradient(config: GradientConfig): string {
 }
 
 export function isGradientValue(css: string): boolean {
-  return GRADIENT_RE.test(css.trim());
+  return matchGradient(css) !== null;
 }
 
 /* ══════════════════════════════════════════════════════════════

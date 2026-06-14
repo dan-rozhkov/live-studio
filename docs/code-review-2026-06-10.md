@@ -86,6 +86,8 @@ this.wss = new WebSocketServer({ port: this.port, maxPayload: 10 * 1024 * 1024 }
 
 **Фикс:** баланс скобок при матчинге, поддержка знака и угловых юнитов, выделить парсер в чистый модуль + round-trip тесты.
 
+> **✅ Частично исправлено (2026-06-14):** многослойные значения теперь отвергаются (баланс скобок: `matchGradient`), поддержаны знак и угловые юниты (deg/grad/rad/turn) для linear и conic. Покрыто `gradient-parser.test.ts`. Conic-стопы с угловыми позициями и double-position (`red 0% 50%`) пока **не** исправлены — помечены `describe.skip` как известное ограничение. Парсер не выносился в отдельный модуль (функции уже экспортируются из `GradientInput.tsx`).
+
 ### P0.9. TransformSection молча меняет порядок transform-функций
 `src/client/components/PropertiesPanel/sections/TransformSection.tsx:116–129` — bug, high
 
@@ -134,7 +136,7 @@ CSS transform некоммутативен, но `composeTransform` всегда
 - `edit-slice.ts:15–38` — `enrichChange` приписывает source выделенного элемента любым правкам без него, включая `createDesignToken` на `:root` — агент уходит править не тот файл.
 - `FillSection.tsx:28–77` — `visible`/`prevSolidRef` не ключуются по `selectedNodeId`: «глазик» и спрятанный цвет элемента A применяются к элементу B.
 - `GradientInput.tsx:403–480` — драг стопов клампится в 0–100 даже в px-режиме; add-stop игнорирует `stopUnit`; toggle repeating использует магический `size = 20`.
-- `ColorInput.tsx:128–165` — `parseCssColor` не знает named colors (`red` → «invalid»), `rgb(% % %)`, `hsl(120deg ...)`; незаякоренные regex'ы «парсят» `color-mix(...)` как вложенный rgb и перезаписывают всё выражение.
+- `ColorInput.tsx:128–165` — `parseCssColor` не знает named colors (`red` → «invalid»), `rgb(% % %)`, `hsl(120deg ...)`; незаякоренные regex'ы «парсят» `color-mix(...)` как вложенный rgb и перезаписывают всё выражение. **✅ Исправлено (2026-06-14):** добавлены named colors (полная таблица), `rgb()`-проценты, угловые юниты у hue; regex заякорены — `color-mix()`/`oklch()` больше не мис-парсятся. Покрыто `color-parser.test.ts`.
 - `LayoutSection.tsx:229–294` + `use-undo.ts:67–86` — составные правки (margin L+R, alignment, 4 радиуса) пушатся отдельными undo-записями; Cmd+Z откатывает пол-изменения. `pushBatch` существует, но не используется style-путём.
 - `use-keyboard.ts` / `serve.ts:168` — пустой ответ `""` на вопрос агента неотличим от таймаута (falsy-check).
 - `use-inline-edit.ts:111–132` — после правки остаётся `contenteditable="false"` в DOM пользователя и затирается исходный inline-`outline`.

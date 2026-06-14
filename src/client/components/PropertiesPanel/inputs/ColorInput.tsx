@@ -125,9 +125,70 @@ export function formatColor(hsva: HSVA, mode: ColorMode): string {
   }
 }
 
+/** Standard CSS named colors → hex. Lowercase keys; keyword colors that have no
+ *  fixed value (currentcolor, inherit) are intentionally absent. */
+const NAMED_COLOR_HEX: Record<string, string> = {
+  aliceblue: '#f0f8ff', antiquewhite: '#faebd7', aqua: '#00ffff', aquamarine: '#7fffd4',
+  azure: '#f0ffff', beige: '#f5f5dc', bisque: '#ffe4c4', black: '#000000',
+  blanchedalmond: '#ffebcd', blue: '#0000ff', blueviolet: '#8a2be2', brown: '#a52a2a',
+  burlywood: '#deb887', cadetblue: '#5f9ea0', chartreuse: '#7fff00', chocolate: '#d2691e',
+  coral: '#ff7f50', cornflowerblue: '#6495ed', cornsilk: '#fff8dc', crimson: '#dc143c',
+  cyan: '#00ffff', darkblue: '#00008b', darkcyan: '#008b8b', darkgoldenrod: '#b8860b',
+  darkgray: '#a9a9a9', darkgreen: '#006400', darkgrey: '#a9a9a9', darkkhaki: '#bdb76b',
+  darkmagenta: '#8b008b', darkolivegreen: '#556b2f', darkorange: '#ff8c00', darkorchid: '#9932cc',
+  darkred: '#8b0000', darksalmon: '#e9967a', darkseagreen: '#8fbc8f', darkslateblue: '#483d8b',
+  darkslategray: '#2f4f4f', darkslategrey: '#2f4f4f', darkturquoise: '#00ced1', darkviolet: '#9400d3',
+  deeppink: '#ff1493', deepskyblue: '#00bfff', dimgray: '#696969', dimgrey: '#696969',
+  dodgerblue: '#1e90ff', firebrick: '#b22222', floralwhite: '#fffaf0', forestgreen: '#228b22',
+  fuchsia: '#ff00ff', gainsboro: '#dcdcdc', ghostwhite: '#f8f8ff', gold: '#ffd700',
+  goldenrod: '#daa520', gray: '#808080', green: '#008000', greenyellow: '#adff2f',
+  grey: '#808080', honeydew: '#f0fff0', hotpink: '#ff69b4', indianred: '#cd5c5c',
+  indigo: '#4b0082', ivory: '#fffff0', khaki: '#f0e68c', lavender: '#e6e6fa',
+  lavenderblush: '#fff0f5', lawngreen: '#7cfc00', lemonchiffon: '#fffacd', lightblue: '#add8e6',
+  lightcoral: '#f08080', lightcyan: '#e0ffff', lightgoldenrodyellow: '#fafad2', lightgray: '#d3d3d3',
+  lightgreen: '#90ee90', lightgrey: '#d3d3d3', lightpink: '#ffb6c1', lightsalmon: '#ffa07a',
+  lightseagreen: '#20b2aa', lightskyblue: '#87cefa', lightslategray: '#778899', lightslategrey: '#778899',
+  lightsteelblue: '#b0c4de', lightyellow: '#ffffe0', lime: '#00ff00', limegreen: '#32cd32',
+  linen: '#faf0e6', magenta: '#ff00ff', maroon: '#800000', mediumaquamarine: '#66cdaa',
+  mediumblue: '#0000cd', mediumorchid: '#ba55d3', mediumpurple: '#9370db', mediumseagreen: '#3cb371',
+  mediumslateblue: '#7b68ee', mediumspringgreen: '#00fa9a', mediumturquoise: '#48d1cc',
+  mediumvioletred: '#c71585', midnightblue: '#191970', mintcream: '#f5fffa', mistyrose: '#ffe4e1',
+  moccasin: '#ffe4b5', navajowhite: '#ffdead', navy: '#000080', oldlace: '#fdf5e6',
+  olive: '#808000', olivedrab: '#6b8e23', orange: '#ffa500', orangered: '#ff4500',
+  orchid: '#da70d6', palegoldenrod: '#eee8aa', palegreen: '#98fb98', paleturquoise: '#afeeee',
+  palevioletred: '#db7093', papayawhip: '#ffefd5', peachpuff: '#ffdab9', peru: '#cd853f',
+  pink: '#ffc0cb', plum: '#dda0dd', powderblue: '#b0e0e6', purple: '#800080',
+  rebeccapurple: '#663399', red: '#ff0000', rosybrown: '#bc8f8f', royalblue: '#4169e1',
+  saddlebrown: '#8b4513', salmon: '#fa8072', sandybrown: '#f4a460', seagreen: '#2e8b57',
+  seashell: '#fff5ee', sienna: '#a0522d', silver: '#c0c0c0', skyblue: '#87ceeb',
+  slateblue: '#6a5acd', slategray: '#708090', slategrey: '#708090', snow: '#fffafa',
+  springgreen: '#00ff7f', steelblue: '#4682b4', tan: '#d2b48c', teal: '#008080',
+  thistle: '#d8bfd8', tomato: '#ff6347', turquoise: '#40e0d0', violet: '#ee82ee',
+  wheat: '#f5deb3', white: '#ffffff', whitesmoke: '#f5f5f5', yellow: '#ffff00',
+  yellowgreen: '#9acd32',
+};
+
+/** Parse a single rgb()/rgba() channel that is either a 0-255 number or a 0-100% value. */
+function parseColorChannel(token: string): number {
+  if (token.endsWith('%')) return Math.round((parseFloat(token) / 100) * 255);
+  return parseInt(token, 10);
+}
+
+/** Normalize a CSS hue value to degrees, honoring the optional angle unit. */
+function hueToDegrees(value: number, unit?: string): number {
+  switch (unit) {
+    case 'turn': return value * 360;
+    case 'rad': return (value * 180) / Math.PI;
+    case 'grad': return value * 0.9;
+    default: return value; // deg or unitless
+  }
+}
+
 export function parseCssColor(value: string): HSVA | null {
   const v = value.trim().toLowerCase();
   if (v === 'transparent') return { h: 0, s: 0, v: 0, a: 0 };
+  const named = NAMED_COLOR_HEX[v];
+  if (named) return hexToHsva(named);
   if (v.startsWith('#')) {
     const hex = v.slice(1);
     if (/^[0-9a-f]{3}$|^[0-9a-f]{4}$|^[0-9a-f]{6}$|^[0-9a-f]{8}$/.test(hex)) {
@@ -135,13 +196,15 @@ export function parseCssColor(value: string): HSVA | null {
     }
     return null;
   }
+  // Regexes are anchored to the whole value so wrappers like color-mix()/oklch()
+  // that merely contain an rgb()/hsl() substring are NOT mis-parsed (P1.14).
   const rgbMatch = v.match(
-    /rgba?\(\s*(\d+)\s*[,\s]\s*(\d+)\s*[,\s]\s*(\d+)\s*(?:[,/]\s*([\d.]+%?))?\s*\)/,
+    /^rgba?\(\s*([\d.]+%?)\s*[,\s]\s*([\d.]+%?)\s*[,\s]\s*([\d.]+%?)\s*(?:[,/]\s*([\d.]+%?))?\s*\)$/,
   );
   if (rgbMatch) {
-    const r = parseInt(rgbMatch[1]);
-    const g = parseInt(rgbMatch[2]);
-    const b = parseInt(rgbMatch[3]);
+    const r = parseColorChannel(rgbMatch[1]);
+    const g = parseColorChannel(rgbMatch[2]);
+    const b = parseColorChannel(rgbMatch[3]);
     let a = 1;
     if (rgbMatch[4]) {
       a = rgbMatch[4].endsWith('%') ? parseFloat(rgbMatch[4]) / 100 : parseFloat(rgbMatch[4]);
@@ -149,15 +212,15 @@ export function parseCssColor(value: string): HSVA | null {
     return rgbaToHsva(r, g, b, a);
   }
   const hslMatch = v.match(
-    /hsla?\(\s*([\d.]+)\s*[,\s]\s*([\d.]+)%\s*[,\s]\s*([\d.]+)%\s*(?:[,/]\s*([\d.]+%?))?\s*\)/,
+    /^hsla?\(\s*([\d.]+)(deg|grad|rad|turn)?\s*[,\s]\s*([\d.]+)%\s*[,\s]\s*([\d.]+)%\s*(?:[,/]\s*([\d.]+%?))?\s*\)$/,
   );
   if (hslMatch) {
-    const h = parseFloat(hslMatch[1]);
-    const s = parseFloat(hslMatch[2]);
-    const l = parseFloat(hslMatch[3]);
+    const h = hueToDegrees(parseFloat(hslMatch[1]), hslMatch[2]);
+    const s = parseFloat(hslMatch[3]);
+    const l = parseFloat(hslMatch[4]);
     let a = 1;
-    if (hslMatch[4]) {
-      a = hslMatch[4].endsWith('%') ? parseFloat(hslMatch[4]) / 100 : parseFloat(hslMatch[4]);
+    if (hslMatch[5]) {
+      a = hslMatch[5].endsWith('%') ? parseFloat(hslMatch[5]) / 100 : parseFloat(hslMatch[5]);
     }
     return hslaToHsva(h, s, l, a);
   }
