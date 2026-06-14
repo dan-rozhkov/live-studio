@@ -264,7 +264,7 @@ export async function handleGetAction(
   const response: Record<string, unknown> = {
     changes: changes ?? [],
   };
-  if (changes && changes.length > 0) bridge.consumeChanges();
+  if (changes && changes.length > 0) bridge.consumeChanges(changes.length);
   if (url) response.url = url;
   if (viewport) response.viewport = viewport;
   if (messages.length > 0) response.messages = messages;

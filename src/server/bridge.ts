@@ -122,6 +122,17 @@ export class DevToolsBridge {
     return this.ready && this.startError === null;
   }
 
+  /**
+   * The actual TCP port the server is bound to. When constructed with port 0
+   * the OS assigns a free port; this exposes it (test seam + diagnostics).
+   * Falls back to the configured port before the server is listening.
+   */
+  get boundPort(): number {
+    const addr = this.wss?.address();
+    if (addr && typeof addr === "object") return addr.port;
+    return this.port;
+  }
+
   /** Start the WebSocket server if not already started. */
   ensureStarted(): void {
     if (this.started && !this.startError) return;
@@ -215,8 +226,14 @@ export class DevToolsBridge {
         } catch {
           return;
         }
+        if (!msg || typeof msg !== "object") return;
 
-        this.handleMessage(msg);
+        // A malformed-but-valid-JSON frame must never crash the process (P0.2).
+        try {
+          this.handleMessage(msg);
+        } catch (err) {
+          console.error("[live-studio] Error handling client message:", err);
+        }
       });
 
       ws.on("close", () => {
@@ -263,15 +280,18 @@ export class DevToolsBridge {
   private handleMessage(msg: any): void {
     switch (msg.type) {
       case "page-info": {
-        if (this.activeUrl !== msg.url) {
+        if (typeof msg.url === "string" && this.activeUrl !== msg.url) {
           this.activeUrl = msg.url;
           this.urlSentToAgent = false;
         }
         const vp = msg.viewport;
         if (
-          !this.activeViewport ||
-          this.activeViewport.width !== vp.width ||
-          this.activeViewport.height !== vp.height
+          vp &&
+          typeof vp.width === "number" &&
+          typeof vp.height === "number" &&
+          (!this.activeViewport ||
+            this.activeViewport.width !== vp.width ||
+            this.activeViewport.height !== vp.height)
         ) {
           this.activeViewport = vp;
           this.viewportSentToAgent = false;
@@ -299,6 +319,7 @@ export class DevToolsBridge {
       }
 
       case "style-update": {
+        if (!Array.isArray(msg.changes)) break;
         this.pendingChanges.push(...msg.changes);
         this.flushWaitingResolvers();
         this.onUpdate?.(msg.changes);
@@ -595,9 +616,21 @@ export class DevToolsBridge {
   // Public API — consuming queued data
   // ---------------------------------------------------------------------------
 
-  /** Clear pending changes and tell the browser the agent is implementing them. */
-  consumeChanges(): void {
-    this.pendingChanges = [];
+  /**
+   * Remove consumed changes and tell the browser the agent is implementing them.
+   *
+   * Pass `count` — the number of changes the caller actually saw (the snapshot
+   * length) — so changes that arrived between the snapshot and this call are
+   * preserved rather than silently dropped (P1.2 lost-update). Changes are a
+   * FIFO queue (only ever appended), so the snapshot is always a prefix.
+   * Omitting `count` clears the whole queue (legacy behavior).
+   */
+  consumeChanges(count?: number): void {
+    if (count === undefined) {
+      this.pendingChanges = [];
+    } else {
+      this.pendingChanges.splice(0, count);
+    }
     this.broadcast({ type: "drained", implementing: true });
   }
 
