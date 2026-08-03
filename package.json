@@ -54,7 +54,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.1.8",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.28.1",
     "esbuild-css-modules-plugin": "^3.1.0",
     "html-to-image": "^1.11.13",
     "immer": "^10.0.0",
